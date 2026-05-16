@@ -128,6 +128,7 @@ export default defineSchema({
   })
     .index('by_company', ['companyId'])
     .index('by_status', ['status'])
+    .index('by_company_and_status', ['companyId', 'status'])
     .index('by_assigned_driver', ['assignedDriverId'])
     .index('by_accepted_driver', ['acceptedByDriverId']),
   tripOffers: defineTable({
@@ -139,6 +140,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index('by_company', ['companyId'])
+    .index('by_company_and_status', ['companyId', 'status'])
+    .index('by_driver', ['driverId'])
     .index('by_driver_and_status', ['driverId', 'status'])
     .index('by_trip', ['tripId'])
     .index('by_trip_and_driver', ['tripId', 'driverId']),

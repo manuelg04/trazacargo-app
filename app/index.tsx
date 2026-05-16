@@ -30,10 +30,14 @@ export default function IndexScreen() {
     return <Redirect href="/(driver)/offers" />;
   }
 
+  if (currentProfile.profile.role === 'DISPATCHER' || currentProfile.profile.role === 'ADMIN') {
+    return <Redirect href="/(dispatcher)/dashboard" />;
+  }
+
   return (
-    <AppScreen title="Perfil no disponible" subtitle="Este perfil todavía no tiene una experiencia móvil activa.">
+    <AppScreen title="Perfil no disponible" subtitle="Este rol no está soportado en TrazaCargo.">
       <Text style={{ ...typography.body, color: colors.text }}>
-        Tu rol actual es {roleLabels[currentProfile.profile.role]}. Se habilitará en otra fase.
+        Tu rol actual es {roleLabels[currentProfile.profile.role] ?? currentProfile.profile.role}.
       </Text>
     </AppScreen>
   );

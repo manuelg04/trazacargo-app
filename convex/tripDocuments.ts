@@ -1,7 +1,7 @@
 import { query } from './_generated/server';
 import { v } from 'convex/values';
 import { documentStatusValidator, documentTypeValidator, uploadedByTypeValidator } from './schema';
-import { assertDriverCanAccessTrip, requireDriverProfile } from './lib/auth';
+import { assertDispatcherCanAccessTrip, assertDriverCanAccessTrip, requireDispatcherOrAdminProfile, requireDriverProfile } from './lib/permissions';
 
 const tripDocumentReturn = v.object({
   _id: v.id('tripDocuments'),
@@ -25,6 +25,23 @@ export const listByTripForCurrentDriver = query({
   handler: async (ctx, args) => {
     const { profile } = await requireDriverProfile(ctx);
     await assertDriverCanAccessTrip(ctx, profile, args.tripId);
+
+    return await ctx.db
+      .query('tripDocuments')
+      .withIndex('by_trip_and_created_at', (q) => q.eq('tripId', args.tripId))
+      .order('asc')
+      .collect();
+  },
+});
+
+export const listByTripForDispatcher = query({
+  args: {
+    tripId: v.id('trips'),
+  },
+  returns: v.array(tripDocumentReturn),
+  handler: async (ctx, args) => {
+    const { profile } = await requireDispatcherOrAdminProfile(ctx);
+    await assertDispatcherCanAccessTrip(ctx, profile, args.tripId);
 
     return await ctx.db
       .query('tripDocuments')

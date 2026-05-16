@@ -2,7 +2,7 @@ import { ConvexError, v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { tripEventTypeValidator } from './schema';
 import { Doc } from './_generated/dataModel';
-import { assertDriverCanAccessTrip, requireDriverProfile } from './lib/auth';
+import { assertDispatcherCanAccessTrip, assertDriverCanAccessTrip, requireDispatcherOrAdminProfile, requireDriverProfile } from './lib/permissions';
 
 const tripEventReturn = v.object({
   _id: v.id('tripEvents'),
@@ -90,6 +90,34 @@ export const listByTripForCurrentDriver = query({
   handler: async (ctx, args) => {
     const { profile } = await requireDriverProfile(ctx);
     await assertDriverCanAccessTrip(ctx, profile, args.tripId);
+
+    const events = await ctx.db
+      .query('tripEvents')
+      .withIndex('by_trip_and_occurred_at', (q) => q.eq('tripId', args.tripId))
+      .order('desc')
+      .collect();
+    const results: (Doc<'tripEvents'> & { driverName?: string })[] = [];
+
+    for (const event of events) {
+      const driver = event.driverId ? await ctx.db.get(event.driverId) : null;
+      results.push({
+        ...event,
+        driverName: driver?.fullName,
+      });
+    }
+
+    return results;
+  },
+});
+
+export const listByTripForDispatcher = query({
+  args: {
+    tripId: v.id('trips'),
+  },
+  returns: v.array(tripEventReturn),
+  handler: async (ctx, args) => {
+    const { profile } = await requireDispatcherOrAdminProfile(ctx);
+    await assertDispatcherCanAccessTrip(ctx, profile, args.tripId);
 
     const events = await ctx.db
       .query('tripEvents')

@@ -37,13 +37,20 @@ export default function AccessCodeScreen() {
     return <Redirect href="/(driver)/offers" />;
   }
 
+  if (
+    currentProfile?.profile?.status === 'ACTIVE' &&
+    (currentProfile.profile.role === 'DISPATCHER' || currentProfile.profile.role === 'ADMIN')
+  ) {
+    return <Redirect href="/(dispatcher)/dashboard" />;
+  }
+
   const handleRedeem = async (code: string) => {
     setSubmitting(true);
     setError(undefined);
 
     try {
       const result = await redeemAccessCode({ code });
-      router.replace(result.profile.role === 'DRIVER' ? '/(driver)/offers' : '/');
+      router.replace(result.profile.role === 'DRIVER' ? '/(driver)/offers' : '/(dispatcher)/dashboard');
     } catch (redeemError) {
       setError(getAccessCodeErrorMessage(redeemError));
     } finally {
