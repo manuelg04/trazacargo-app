@@ -3,9 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { AppInput } from '@/src/components/AppInput';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, radius, spacing } from '@/constants/theme';
 
 export type TripFormValues = {
   originCity: string;
@@ -27,75 +25,118 @@ type TripFormProps = {
 export function TripForm({ loading = false, onSubmit }: TripFormProps) {
   const [originCity, setOriginCity] = useState('');
   const [destinationCity, setDestinationCity] = useState('');
-  const [routeLabel, setRouteLabel] = useState('');
+  const [routeLabel] = useState('');
   const [pickupAt, setPickupAt] = useState('');
   const [deliveryEta, setDeliveryEta] = useState('');
   const [cargoDescription, setCargoDescription] = useState('');
   const [freightValue, setFreightValue] = useState('');
   const [advanceValue, setAdvanceValue] = useState('');
   const [observations, setObservations] = useState('');
-  const [error, setError] = useState<string | undefined>();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = () => {
-    if (!originCity.trim() || !destinationCity.trim() || !pickupAt.trim() || !cargoDescription.trim()) {
-      setError('Completa origen, destino, fecha de cargue y carga.');
+    const newErrors: Record<string, string> = {};
+
+    if (!originCity.trim()) newErrors.originCity = 'Requerido';
+    if (!destinationCity.trim()) newErrors.destinationCity = 'Requerido';
+    if (!pickupAt.trim()) newErrors.pickupAt = 'Requerido';
+    if (!cargoDescription.trim()) newErrors.cargoDescription = 'Requerido';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
-    setError(undefined);
+    setErrors({});
     onSubmit({
-      originCity,
-      destinationCity,
-      routeLabel,
-      pickupAt,
-      deliveryEta,
-      cargoDescription,
-      freightValue,
-      advanceValue,
-      observations,
+      originCity, destinationCity, routeLabel, pickupAt,
+      deliveryEta, cargoDescription, freightValue, advanceValue, observations,
     });
   };
 
   return (
     <AppCard>
       <View style={styles.form}>
-        <AppInput label="Ciudad origen" value={originCity} onChangeText={setOriginCity} autoCapitalize="words" />
-        <AppInput label="Ciudad destino" value={destinationCity} onChangeText={setDestinationCity} autoCapitalize="words" />
-        <AppInput label="Ruta / etiqueta" value={routeLabel} onChangeText={setRouteLabel} autoCapitalize="sentences" />
-        <AppInput label="Fecha de cargue" value={pickupAt} onChangeText={setPickupAt} placeholder="2026-05-20 08:00" />
-        <AppInput label="ETA entrega" value={deliveryEta} onChangeText={setDeliveryEta} placeholder="2026-05-21 16:00" />
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <AppInput
+              label="Ciudad origen *"
+              value={originCity}
+              onChangeText={setOriginCity}
+              autoCapitalize="words"
+              error={errors.originCity}
+            />
+          </View>
+          <View style={styles.col}>
+            <AppInput
+              label="Ciudad destino *"
+              value={destinationCity}
+              onChangeText={setDestinationCity}
+              autoCapitalize="words"
+              error={errors.destinationCity}
+            />
+          </View>
+        </View>
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <AppInput
+              label="Fecha de cargue *"
+              value={pickupAt}
+              onChangeText={setPickupAt}
+              placeholder="15 mayo 2026"
+              error={errors.pickupAt}
+            />
+          </View>
+          <View style={styles.col}>
+            <AppInput
+              label="ETA entrega"
+              value={deliveryEta}
+              onChangeText={setDeliveryEta}
+              placeholder="16 mayo 2026"
+            />
+          </View>
+        </View>
         <AppInput
-          label="Descripción de carga"
+          label="Descripción de carga *"
           value={cargoDescription}
           onChangeText={setCargoDescription}
           autoCapitalize="sentences"
           multiline
-          style={styles.multiline}
+          error={errors.cargoDescription}
         />
-        <AppInput
-          label="Valor flete"
-          value={freightValue}
-          onChangeText={setFreightValue}
-          keyboardType="number-pad"
-          placeholder="4200000"
-        />
-        <AppInput
-          label="Anticipo"
-          value={advanceValue}
-          onChangeText={setAdvanceValue}
-          keyboardType="number-pad"
-          placeholder="1200000"
-        />
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <AppInput
+              label="Valor flete"
+              value={freightValue}
+              onChangeText={setFreightValue}
+              keyboardType="number-pad"
+              placeholder="💵 3200000"
+            />
+          </View>
+          <View style={styles.col}>
+            <AppInput
+              label="Anticipo"
+              value={advanceValue}
+              onChangeText={setAdvanceValue}
+              keyboardType="number-pad"
+              placeholder="800000"
+            />
+          </View>
+        </View>
         <AppInput
           label="Observaciones"
           value={observations}
           onChangeText={setObservations}
           autoCapitalize="sentences"
           multiline
-          style={styles.multiline}
         />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <AppButton title="Crear viaje" onPress={handleSubmit} loading={loading} />
+        {Object.keys(errors).length > 0 ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>Completa los campos requeridos (*)</Text>
+          </View>
+        ) : null}
+        <AppButton label="Crear viaje" onPress={handleSubmit} loading={loading} size="lg" fullWidth />
       </View>
     </AppCard>
   );
@@ -103,14 +144,25 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
 
 const styles = StyleSheet.create({
   form: {
-    gap: spacing.md,
+    gap: spacing[3],
   },
-  multiline: {
-    minHeight: 88,
-    textAlignVertical: 'top',
+  row: {
+    flexDirection: 'row',
+    gap: spacing[3],
   },
-  error: {
-    ...typography.body,
-    color: colors.danger,
+  col: {
+    flex: 1,
+  },
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: radius.btn,
+    borderWidth: 1,
+    padding: spacing[3],
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
   },
 });

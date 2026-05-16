@@ -1,8 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '@/src/components/AppButton';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, radius, spacing } from '@/constants/theme';
 
 type AppErrorStateProps = {
   title: string;
@@ -11,36 +9,41 @@ type AppErrorStateProps = {
   onAction?: () => void;
 };
 
-export function AppErrorState({ title, message, actionLabel, onAction }: AppErrorStateProps) {
+export function AppErrorState({ title, message, actionLabel = 'Intentar de nuevo', onAction }: AppErrorStateProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
-      {actionLabel && onAction ? <AppButton title={actionLabel} onPress={onAction} style={styles.action} /> : null}
+      {onAction ? (
+        <AppButton label={actionLabel} onPress={onAction} variant="danger" style={styles.action} />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: radius.card,
     borderWidth: 1,
-    padding: spacing.xl,
+    padding: spacing[6],
   },
   title: {
-    ...typography.cardTitle,
-    color: colors.text,
+    color: colors.error,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.base,
     textAlign: 'center',
   },
   message: {
-    ...typography.body,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    lineHeight: fontSize.sm * 1.6,
+    marginTop: 6,
     textAlign: 'center',
   },
   action: {
-    marginTop: spacing.lg,
+    marginTop: 16,
   },
 });

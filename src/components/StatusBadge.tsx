@@ -1,43 +1,64 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { accessCodeStatusLabels, profileStatusLabels } from '@/src/constants/access';
-import { documentStatusLabels, offerStatusLabels, tripStatusLabels } from '@/src/constants/tripStatuses';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import {
+  accessCodeStatusColors,
+  accessCodeStatusLabels,
+  docStateColors,
+  docStateLabels,
+  fontFamily,
+  fontSize,
+  offerStatusColors,
+  offerStatusLabels,
+  profileStatusColors,
+  profileStatusLabels,
+  radius,
+  roleColors,
+  roleLabels,
+  tripStateColors,
+  tripStateLabels,
+} from '@/constants/theme';
 
 type StatusBadgeProps = {
   status: string;
 };
 
-const statusToneByValue: Record<string, { backgroundColor: string; color: string }> = {
-  ACCEPTED: { backgroundColor: colors.successSoft, color: colors.success },
-  ACTIVE: { backgroundColor: colors.successSoft, color: colors.success },
-  AVAILABLE: { backgroundColor: colors.successSoft, color: colors.success },
-  APPROVED: { backgroundColor: colors.successSoft, color: colors.success },
-  OFFERED: { backgroundColor: colors.infoSoft, color: colors.info },
-  PENDING: { backgroundColor: colors.warningSoft, color: colors.warning },
-  DOCUMENTS_PENDING: { backgroundColor: colors.warningSoft, color: colors.warning },
-  DOCUMENTS_SUBMITTED: { backgroundColor: colors.infoSoft, color: colors.info },
-  CANCELLED: { backgroundColor: colors.dangerSoft, color: colors.danger },
-  DISABLED: { backgroundColor: colors.dangerSoft, color: colors.danger },
-  REJECTED: { backgroundColor: colors.dangerSoft, color: colors.danger },
-  EXPIRED: { backgroundColor: colors.dangerSoft, color: colors.danger },
-  ARCHIVED: { backgroundColor: colors.neutralSoft, color: colors.textMuted },
-};
+function resolveLabel(status: string) {
+  return (
+    tripStateLabels[status] ??
+    docStateLabels[status] ??
+    offerStatusLabels[status] ??
+    profileStatusLabels[status] ??
+    accessCodeStatusLabels[status] ??
+    roleLabels[status] ??
+    status
+  );
+}
+
+function resolveTone(status: string) {
+  return (
+    tripStateColors[status] ??
+    docStateColors[status] ??
+    offerStatusColors[status] ??
+    profileStatusColors[status] ??
+    accessCodeStatusColors[status] ??
+    roleColors[status] ??
+    { bg: '#F0F0ED', text: '#6E8078', border: '#D4D4CE' }
+  );
+}
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const label =
-    tripStatusLabels[status as keyof typeof tripStatusLabels] ??
-    offerStatusLabels[status as keyof typeof offerStatusLabels] ??
-    documentStatusLabels[status as keyof typeof documentStatusLabels] ??
-    profileStatusLabels[status as keyof typeof profileStatusLabels] ??
-    accessCodeStatusLabels[status as keyof typeof accessCodeStatusLabels] ??
-    status;
-  const tone = statusToneByValue[status] ?? { backgroundColor: colors.neutralSoft, color: colors.textMuted };
+  const label = resolveLabel(status);
+  const tone = resolveTone(status);
 
   return (
-    <View style={[styles.badge, { backgroundColor: tone.backgroundColor }]}>
-      <Text style={[styles.text, { color: tone.color }]}>{label}</Text>
+    <View
+      style={[
+        styles.badge,
+        {
+          backgroundColor: tone.bg,
+          borderColor: tone.border,
+        },
+      ]}>
+      <Text style={[styles.text, { color: tone.text }]}>{label}</Text>
     </View>
   );
 }
@@ -45,12 +66,15 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
   },
   text: {
-    ...typography.small,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xs,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

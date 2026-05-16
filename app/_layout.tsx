@@ -4,8 +4,16 @@ import { ConvexReactClient } from 'convex/react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
-import { colors } from '@/src/theme/colors';
+import { Platform, View } from 'react-native';
+import {
+  useFonts,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { colors } from '@/constants/theme';
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
@@ -21,11 +29,11 @@ const navigationTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: colors.background,
+    background: colors.bgCanvas,
     card: colors.surface,
-    primary: colors.primary,
-    text: colors.text,
-    border: colors.border,
+    primary: colors.brand500,
+    text: colors.textPrimary,
+    border: colors.borderSubtle,
   },
 };
 
@@ -36,11 +44,23 @@ const secureStorage = {
 };
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
+
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: colors.bgCanvas }} />;
+  }
+
   return (
     <ConvexAuthProvider client={convex} storage={Platform.OS === 'web' ? undefined : secureStorage}>
       <ThemeProvider value={navigationTheme}>
         <Stack screenOptions={{ headerShown: false }} />
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
       </ThemeProvider>
     </ConvexAuthProvider>
   );

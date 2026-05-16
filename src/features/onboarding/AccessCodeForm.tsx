@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '@/src/components/AppButton';
 import { AppInput } from '@/src/components/AppInput';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, radius, spacing } from '@/constants/theme';
 
 type AccessCodeFormProps = {
   loading: boolean;
@@ -28,29 +26,45 @@ export function AccessCodeForm({ loading, error, onSubmit }: AccessCodeFormProps
     await onSubmit(normalizedCode);
   };
 
+  const displayError = localError ?? error;
+
   return (
     <View style={styles.container}>
       <AppInput
-        nativeID="access-code"
         label="Código de acceso"
         value={code}
-        onChangeText={setCode}
+        onChangeText={(text) => setCode(text.toUpperCase())}
         autoCapitalize="characters"
-        autoCorrect={false}
-        placeholder="TC-CARLOS-2026"
+        placeholder="Ej: TC-4827-X"
+        icon={<Text style={styles.inputIcon}>🔑</Text>}
       />
-      {localError || error ? <Text style={styles.error}>{localError ?? error}</Text> : null}
-      <AppButton title="Activar acceso" onPress={handleSubmit} loading={loading} />
+      {displayError ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>⚠ {displayError}</Text>
+        </View>
+      ) : null}
+      <AppButton label="Activar acceso" onPress={handleSubmit} loading={loading} size="lg" fullWidth />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    gap: spacing[3],
   },
-  error: {
-    ...typography.body,
-    color: colors.danger,
+  inputIcon: {
+    fontSize: 16,
+  },
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: radius.btn,
+    borderWidth: 1,
+    padding: spacing[3],
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
   },
 });

@@ -4,9 +4,7 @@ import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { DriverPicker } from '@/src/features/dispatcher/DriverPicker';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 
 type TripOfferPanelDriver = {
   _id: Id<'drivers'>;
@@ -56,14 +54,15 @@ export function TripOfferPanel({
         onChange={onChangeSelectedDrivers}
       />
       <AppButton
-        title="Ofertar viaje"
+        label="Ofertar viaje"
         onPress={onOffer}
         loading={offering}
         disabled={selectedDriverIds.length === 0}
+        fullWidth
         style={styles.action}
       />
       {offers.length > 0 ? (
-        <View style={styles.offers}>
+        <View style={styles.offersSection}>
           <Text style={styles.subtitle}>Ofertas enviadas</Text>
           {offers.map((offer) => (
             <View key={offer._id} style={styles.offerRow}>
@@ -79,33 +78,36 @@ export function TripOfferPanel({
 
 const styles = StyleSheet.create({
   title: {
-    ...typography.sectionTitle,
-    color: colors.text,
-    marginBottom: spacing.md,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.lg,
+    marginBottom: spacing[3],
   },
   action: {
-    marginTop: spacing.lg,
+    marginTop: spacing[4],
   },
-  offers: {
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+  offersSection: {
+    gap: spacing[2],
+    marginTop: spacing[4],
   },
   subtitle: {
-    ...typography.cardTitle,
-    color: colors.text,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.base,
   },
   offerRow: {
-    alignItems: 'flex-start',
-    borderTopColor: colors.border,
+    alignItems: 'center',
+    borderTopColor: colors.borderSubtle,
     borderTopWidth: 1,
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing[3],
     justifyContent: 'space-between',
-    paddingTop: spacing.sm,
+    paddingTop: spacing[2],
   },
   offerDriver: {
-    ...typography.body,
-    color: colors.text,
+    color: colors.textPrimary,
     flex: 1,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.base,
   },
 });

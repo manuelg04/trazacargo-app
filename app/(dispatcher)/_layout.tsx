@@ -1,11 +1,9 @@
-import { StyleSheet } from 'react-native';
 import { Redirect, Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { useCurrentProfile } from '@/src/features/auth/useCurrentProfile';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, size } from '@/constants/theme';
 
 export default function DispatcherLayout() {
   const { currentProfile, isAuthenticated, isLoading, isProfileLoading } = useCurrentProfile();
@@ -37,50 +35,40 @@ export default function DispatcherLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: styles.header,
-        headerTitleStyle: styles.headerTitle,
-        tabBarActiveTintColor: colors.primary,
-        tabBarIcon: () => null,
-        tabBarIconStyle: styles.tabIcon,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarItemStyle: styles.tabItem,
-        tabBarLabelStyle: styles.tabLabel,
+        headerShown: false,
+        tabBarActiveTintColor: colors.brand500,
+        tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarItemStyle: styles.tabItem,
+        tabBarIcon: () => null,
+        tabBarIconStyle: { display: 'none' },
       }}>
-      <Tabs.Screen name="dashboard" options={{ title: 'Dashboard', tabBarLabel: 'Dashboard' }} />
-      <Tabs.Screen name="trips" options={{ title: 'Viajes', tabBarLabel: 'Viajes' }} />
-      <Tabs.Screen name="drivers" options={{ title: 'Conductores', tabBarLabel: 'Conductores' }} />
-      <Tabs.Screen name="access-codes" options={{ title: 'Accesos', tabBarLabel: 'Accesos' }} />
-      <Tabs.Screen name="account" options={{ title: 'Cuenta', tabBarLabel: 'Cuenta' }} />
-      <Tabs.Screen name="create-trip" options={{ href: null, title: 'Crear viaje' }} />
-      <Tabs.Screen name="trip/[tripId]" options={{ href: null, title: 'Detalle del viaje' }} />
+      <Tabs.Screen name="dashboard" options={{ tabBarLabel: 'Dashboard' }} />
+      <Tabs.Screen name="trips" options={{ tabBarLabel: 'Viajes' }} />
+      <Tabs.Screen name="drivers" options={{ tabBarLabel: 'Conductores' }} />
+      <Tabs.Screen name="access-codes" options={{ tabBarLabel: 'Accesos' }} />
+      <Tabs.Screen name="account" options={{ tabBarLabel: 'Cuenta' }} />
+      <Tabs.Screen name="create-trip" options={{ href: null }} />
+      <Tabs.Screen name="trip/[tripId]" options={{ href: null }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    backgroundColor: colors.surface,
-  },
-  headerTitle: {
-    ...typography.cardTitle,
-    color: colors.text,
-  },
   tabBar: {
     backgroundColor: colors.surface,
-    borderTopColor: colors.border,
-    height: 64,
-    paddingBottom: spacing.sm,
-    paddingTop: spacing.sm,
+    borderTopColor: colors.borderSubtle,
+    borderTopWidth: 1,
+    height: size.navBar,
+    paddingBottom: 8,
+    paddingTop: 8,
   },
   tabItem: {
     justifyContent: 'center',
   },
-  tabIcon: {
-    display: 'none',
-  },
   tabLabel: {
-    ...typography.small,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xs,
   },
 });

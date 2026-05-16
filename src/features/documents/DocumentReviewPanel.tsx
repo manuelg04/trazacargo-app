@@ -6,9 +6,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { AppButton } from '@/src/components/AppButton';
 import { AppInput } from '@/src/components/AppInput';
 import { DocumentCard, TripDocumentView } from '@/src/features/documents/DocumentCard';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, radius, spacing } from '@/constants/theme';
 
 type DocumentReviewPanelProps = {
   documents: TripDocumentView[];
@@ -63,13 +61,23 @@ export function DocumentReviewPanel({ documents }: DocumentReviewPanelProps) {
   };
 
   if (documents.length === 0) {
-    return <Text style={styles.empty}>Todavía no hay documentos enviados por el conductor.</Text>;
+    return (
+      <Text style={styles.empty}>Todavía no hay documentos enviados por el conductor.</Text>
+    );
   }
 
   return (
     <View style={styles.container}>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+      {message ? (
+        <View style={styles.messageBox}>
+          <Text style={styles.messageText}>{message}</Text>
+        </View>
+      ) : null}
       {documents.map((document) => {
         const isRejecting = rejectingDocumentId === document._id;
 
@@ -78,13 +86,14 @@ export function DocumentReviewPanel({ documents }: DocumentReviewPanelProps) {
             {document.status === 'SUBMITTED' ? (
               <View style={styles.reviewActions}>
                 <AppButton
-                  title="Aprobar"
-                  variant="secondary"
+                  label="Aprobar"
+                  variant="success"
                   onPress={() => handleApprove(document._id)}
                   loading={activeDocumentId === document._id && !isRejecting}
+                  fullWidth
                 />
                 <AppButton
-                  title={isRejecting ? 'Cancelar rechazo' : 'Rechazar'}
+                  label={isRejecting ? 'Cancelar rechazo' : 'Rechazar'}
                   variant="danger"
                   onPress={() => {
                     setRejectingDocumentId(isRejecting ? undefined : document._id);
@@ -92,21 +101,23 @@ export function DocumentReviewPanel({ documents }: DocumentReviewPanelProps) {
                     setError(undefined);
                   }}
                   disabled={activeDocumentId === document._id}
+                  fullWidth
                 />
                 {isRejecting ? (
                   <View style={styles.rejectBox}>
                     <AppInput
-                      label="Motivo de rechazo"
+                      label="Motivo de rechazo *"
                       value={rejectionReason}
                       onChangeText={setRejectionReason}
-                      placeholder="Ejemplo: el archivo no es legible"
+                      placeholder="Ej: el archivo no es legible"
                       multiline
                     />
                     <AppButton
-                      title="Confirmar rechazo"
+                      label="Confirmar rechazo"
                       variant="danger"
                       onPress={() => handleReject(document._id)}
                       loading={activeDocumentId === document._id}
+                      fullWidth
                     />
                   </View>
                 ) : null}
@@ -121,41 +132,47 @@ export function DocumentReviewPanel({ documents }: DocumentReviewPanelProps) {
 
 function getActionErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : '';
-
-  if (message) {
-    return message;
-  }
-
-  return 'No se pudo completar la acción.';
+  return message || 'No se pudo completar la acción.';
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    gap: spacing[3],
   },
   reviewActions: {
-    gap: spacing.sm,
+    gap: spacing[2],
   },
   rejectBox: {
-    gap: spacing.sm,
+    gap: spacing[2],
   },
   empty: {
-    ...typography.body,
-    color: colors.textMuted,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
     textAlign: 'center',
   },
-  error: {
-    ...typography.body,
-    backgroundColor: colors.dangerSoft,
-    borderRadius: 8,
-    color: colors.danger,
-    padding: spacing.md,
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: radius.btn,
+    borderWidth: 1,
+    padding: spacing[3],
   },
-  message: {
-    ...typography.body,
-    backgroundColor: colors.successSoft,
-    borderRadius: 8,
+  errorText: {
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+  },
+  messageBox: {
+    backgroundColor: colors.successBg,
+    borderColor: colors.successBd,
+    borderRadius: radius.btn,
+    borderWidth: 1,
+    padding: spacing[3],
+  },
+  messageText: {
     color: colors.success,
-    padding: spacing.md,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
   },
 });

@@ -1,9 +1,11 @@
 import { useMutation, useQuery } from 'convex/react';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
+import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { AppErrorState } from '@/src/components/AppErrorState';
@@ -16,13 +18,13 @@ import { DocumentReviewPanel } from '@/src/features/documents/DocumentReviewPane
 import { TripOfferPanel } from '@/src/features/dispatcher/TripOfferPanel';
 import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { TripHeader } from '@/src/features/trips/TripHeader';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
 import { formatCurrency } from '@/src/utils/formatCurrency';
 import { formatDate } from '@/src/utils/formatDate';
 
+type Tab = 'info' | 'docs' | 'events';
+
 export default function DispatcherTripDetailScreen() {
+  const router = useRouter();
   const { tripId } = useLocalSearchParams<{ tripId?: string }>();
   const resolvedTripId = tripId as Id<'trips'> | undefined;
   const detail = useQuery(api.trips.getDetailForDispatcher, resolvedTripId ? { tripId: resolvedTripId } : 'skip');
@@ -35,6 +37,7 @@ export default function DispatcherTripDetailScreen() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [message, setMessage] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState<Tab>('info');
 
   if (!resolvedTripId) {
     return (
@@ -97,95 +100,179 @@ export default function DispatcherTripDetailScreen() {
   const companyDocuments = documents.filter((document) => document.direction === 'COMPANY_TO_DRIVER');
   const driverDocuments = documents.filter((document) => document.direction === 'DRIVER_TO_COMPANY');
 
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'info', label: 'Info y conductor' },
+    { key: 'docs', label: 'Documentos' },
+    { key: 'events', label: 'Eventos' },
+  ];
+
   return (
-    <AppScreen>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
-      <AppCard>
-        <View style={styles.headerRow}>
-          <TripHeader
-            originCity={detail.trip.originCity}
-            destinationCity={detail.trip.destinationCity}
-            routeLabel={detail.trip.routeLabel}
-          />
-          <StatusBadge status={detail.trip.status} />
-        </View>
-        <View style={styles.detailGrid}>
-          <Text style={styles.detailText}>Empresa: {detail.company.name}</Text>
-          <Text style={styles.detailText}>Conductor: {driverName}</Text>
-          <Text style={styles.detailText}>Cargue: {formatDate(detail.trip.pickupAt)}</Text>
-          <Text style={styles.detailText}>Entrega estimada: {formatDate(detail.trip.deliveryEta)}</Text>
-          <Text style={styles.detailText}>Carga: {detail.trip.cargoDescription}</Text>
-          <Text style={styles.detailText}>Flete: {formatCurrency(detail.trip.freightValue)}</Text>
-          <Text style={styles.detailText}>Anticipo: {formatCurrency(detail.trip.advanceValue)}</Text>
-          {detail.trip.observations ? <Text style={styles.detailText}>Observaciones: {detail.trip.observations}</Text> : null}
-        </View>
-        {canCancel ? (
-          <View style={styles.cancelBox}>
-            {confirmCancel ? <Text style={styles.confirmText}>Confirma la cancelación del viaje.</Text> : null}
-            <AppButton
-              title={confirmCancel ? 'Confirmar cancelación' : 'Cancelar viaje'}
-              variant="danger"
-              onPress={handleCancel}
-              loading={cancelling}
-            />
-            {confirmCancel ? (
-              <AppButton title="Mantener viaje" variant="secondary" onPress={() => setConfirmCancel(false)} />
-            ) : null}
+    <View style={styles.root}>
+      <SafeAreaView edges={['top']} style={styles.heroArea}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.backText}>← Volver</Text>
+        </TouchableOpacity>
+        <View style={styles.heroContent}>
+          <Text style={styles.heroRoute} numberOfLines={1}>
+            {detail.trip.originCity} → {detail.trip.destinationCity}
+          </Text>
+          <Text style={styles.heroDescription} numberOfLines={1}>
+            {detail.trip.cargoDescription}
+          </Text>
+          <View style={styles.heroBadge}>
+            <StatusBadge status={detail.trip.status} />
           </View>
-        ) : null}
-      </AppCard>
+        </View>
+        <View style={styles.tabBar}>
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
+                style={[styles.tab, isActive && styles.tabActive]}>
+                <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </SafeAreaView>
 
-      {canOffer ? (
-        <TripOfferPanel
-          drivers={activeDrivers}
-          offers={detail.offers}
-          selectedDriverIds={selectedDriverIds}
-          offering={offering}
-          onChangeSelectedDrivers={setSelectedDriverIds}
-          onOffer={handleOffer}
-        />
-      ) : (
-        <AppCard>
-          <Text style={styles.sectionTitle}>Ofertas enviadas</Text>
-          {detail.offers.length === 0 ? <Text style={styles.detailText}>Este viaje no tiene ofertas.</Text> : null}
-          <View style={styles.offerList}>
-            {detail.offers.map((offer) => (
-              <View key={offer._id} style={styles.offerRow}>
-                <Text style={styles.offerDriver}>{offer.driver.fullName}</Text>
-                <StatusBadge status={offer.status} />
+      <AppScreen scroll key={activeTab}>
+        {activeTab === 'info' ? (
+          <>
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
               </View>
-            ))}
-          </View>
-        </AppCard>
-      )}
+            ) : null}
+            {message ? (
+              <View style={styles.messageBox}>
+                <Text style={styles.messageText}>{message}</Text>
+              </View>
+            ) : null}
+            <AppCard>
+              <View style={styles.tripHeader}>
+                <TripHeader
+                  originCity={detail.trip.originCity}
+                  destinationCity={detail.trip.destinationCity}
+                  routeLabel={detail.trip.routeLabel}
+                />
+              </View>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Empresa</Text>
+                <Text style={styles.dataValue}>{detail.company.name}</Text>
+              </View>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Conductor</Text>
+                <Text style={styles.dataValue}>{driverName}</Text>
+              </View>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Carga</Text>
+                <Text style={styles.dataValue}>{detail.trip.cargoDescription}</Text>
+              </View>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Cargue</Text>
+                <Text style={styles.dataValue}>{formatDate(detail.trip.pickupAt)}</Text>
+              </View>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Entrega estimada</Text>
+                <Text style={styles.dataValue}>{formatDate(detail.trip.deliveryEta)}</Text>
+              </View>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Flete</Text>
+                <Text style={styles.dataValue}>{formatCurrency(detail.trip.freightValue)}</Text>
+              </View>
+              <View style={[styles.dataRow, !detail.trip.observations && styles.dataRowLast]}>
+                <Text style={styles.dataLabel}>Anticipo</Text>
+                <Text style={styles.dataValue}>{formatCurrency(detail.trip.advanceValue)}</Text>
+              </View>
+              {detail.trip.observations ? (
+                <View style={[styles.dataRow, styles.dataRowLast]}>
+                  <Text style={styles.dataLabel}>Observaciones</Text>
+                  <Text style={styles.dataValue}>{detail.trip.observations}</Text>
+                </View>
+              ) : null}
+            </AppCard>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Documentos para el conductor</Text>
-        <CompanyDocumentUploadPanel tripId={resolvedTripId} />
-        {companyDocuments.length === 0 ? (
-          <AppCard>
-            <Text style={styles.emptyText}>Este viaje todavía no tiene documentos para el conductor.</Text>
-          </AppCard>
-        ) : (
-          <View style={styles.documentList}>
-            {companyDocuments.map((document) => (
-              <DocumentCard key={document._id} document={document} showDirection={false} />
-            ))}
-          </View>
-        )}
-      </View>
+            {canOffer ? (
+              <TripOfferPanel
+                drivers={activeDrivers}
+                offers={detail.offers}
+                selectedDriverIds={selectedDriverIds}
+                offering={offering}
+                onChangeSelectedDrivers={setSelectedDriverIds}
+                onOffer={handleOffer}
+              />
+            ) : (
+              <AppCard>
+                <Text style={styles.sectionTitle}>Ofertas enviadas</Text>
+                {detail.offers.length === 0 ? (
+                  <Text style={styles.emptyText}>Este viaje no tiene ofertas.</Text>
+                ) : null}
+                {detail.offers.map((offer) => (
+                  <View key={offer._id} style={styles.offerRow}>
+                    <Text style={styles.offerDriver}>{offer.driver.fullName}</Text>
+                    <StatusBadge status={offer.status} />
+                  </View>
+                ))}
+              </AppCard>
+            )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Documentos recibidos del conductor</Text>
-        <DocumentReviewPanel documents={driverDocuments} />
-      </View>
+            {canCancel ? (
+              <AppCard>
+                {confirmCancel ? (
+                  <Text style={styles.confirmText}>Confirma la cancelación del viaje.</Text>
+                ) : null}
+                <View style={styles.cancelActions}>
+                  <AppButton
+                    label={confirmCancel ? 'Confirmar cancelación' : 'Cancelar viaje'}
+                    variant="danger"
+                    fullWidth
+                    onPress={handleCancel}
+                    loading={cancelling}
+                  />
+                  {confirmCancel ? (
+                    <AppButton
+                      label="Mantener viaje"
+                      variant="secondary"
+                      fullWidth
+                      onPress={() => setConfirmCancel(false)}
+                    />
+                  ) : null}
+                </View>
+              </AppCard>
+            ) : null}
+          </>
+        ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Eventos</Text>
-        <TripEventTimeline events={detail.events} />
-      </View>
-    </AppScreen>
+        {activeTab === 'docs' ? (
+          <>
+            <Text style={styles.sectionTitle}>Documentos para el conductor</Text>
+            <CompanyDocumentUploadPanel tripId={resolvedTripId} />
+            {companyDocuments.length === 0 ? (
+              <AppCard>
+                <Text style={styles.emptyText}>Este viaje todavía no tiene documentos para el conductor.</Text>
+              </AppCard>
+            ) : (
+              <>
+                {companyDocuments.map((document) => (
+                  <DocumentCard key={document._id} document={document} showDirection={false} />
+                ))}
+              </>
+            )}
+            <Text style={styles.sectionTitle}>Documentos del conductor</Text>
+            <DocumentReviewPanel documents={driverDocuments} />
+          </>
+        ) : null}
+
+        {activeTab === 'events' ? (
+          <TripEventTimeline events={detail.events} />
+        ) : null}
+      </AppScreen>
+    </View>
   );
 }
 
@@ -200,71 +287,150 @@ function getActionErrorMessage(error: unknown) {
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    alignItems: 'flex-start',
-    gap: spacing.md,
+  root: {
+    flex: 1,
+    backgroundColor: colors.bgCanvas,
   },
-  detailGrid: {
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+  heroArea: {
+    backgroundColor: colors.brand500,
   },
-  detailText: {
-    ...typography.body,
-    color: colors.text,
+  backButton: {
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[3],
+    paddingBottom: spacing[2],
   },
-  cancelBox: {
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+  backText: {
+    color: colors.textInverse,
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
   },
-  confirmText: {
-    ...typography.body,
-    color: colors.danger,
+  heroContent: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
   },
-  section: {
-    gap: spacing.md,
+  heroRoute: {
+    color: colors.textInverse,
+    fontFamily: fontFamily.extrabold,
+    fontSize: fontSize.xl,
   },
-  documentList: {
-    gap: spacing.md,
+  heroDescription: {
+    color: colors.textInverse,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    marginTop: 2,
+    opacity: 0.75,
   },
-  sectionTitle: {
-    ...typography.sectionTitle,
-    color: colors.text,
+  heroBadge: {
+    marginTop: spacing[2],
   },
-  emptyText: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  offerList: {
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  offerRow: {
-    alignItems: 'flex-start',
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
+  tabBar: {
     flexDirection: 'row',
-    gap: spacing.md,
-    justifyContent: 'space-between',
-    paddingTop: spacing.sm,
+    backgroundColor: colors.surface,
+    height: 48,
   },
-  offerDriver: {
-    ...typography.body,
-    color: colors.text,
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: colors.brand500,
+  },
+  tabText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  tabTextActive: {
+    color: colors.brand500,
+  },
+  tripHeader: {
+    marginBottom: spacing[3],
+  },
+  dataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  dataRowLast: {
+    borderBottomWidth: 0,
+  },
+  dataLabel: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
     flex: 1,
   },
-  error: {
-    ...typography.body,
-    backgroundColor: colors.dangerSoft,
-    borderRadius: 8,
-    color: colors.danger,
-    padding: spacing.md,
+  dataValue: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.base,
+    color: colors.textPrimary,
+    flex: 1,
+    textAlign: 'right',
   },
-  message: {
-    ...typography.body,
-    backgroundColor: colors.successSoft,
-    borderRadius: 8,
+  sectionTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.base,
+    color: colors.textPrimary,
+  },
+  emptyText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  offerRow: {
+    alignItems: 'center',
+    borderTopColor: colors.borderSubtle,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: spacing[3],
+    justifyContent: 'space-between',
+    paddingTop: spacing[3],
+    marginTop: spacing[3],
+  },
+  offerDriver: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.base,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  cancelActions: {
+    gap: spacing[3],
+  },
+  confirmText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    marginBottom: spacing[3],
+  },
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: spacing[4],
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+  },
+  messageBox: {
+    backgroundColor: colors.successBg,
+    borderColor: colors.successBd,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: spacing[4],
+  },
+  messageText: {
     color: colors.success,
-    padding: spacing.md,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
   },
 });

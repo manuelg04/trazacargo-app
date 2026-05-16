@@ -7,10 +7,7 @@ import { AppCard } from '@/src/components/AppCard';
 import { AppEmptyState } from '@/src/components/AppEmptyState';
 import { AppScreen } from '@/src/components/AppScreen';
 import { StatusBadge } from '@/src/components/StatusBadge';
-import { roleLabels } from '@/src/constants/access';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, radius, roleLabels, spacing } from '@/constants/theme';
 
 type SeedResult = {
   accessCodes: {
@@ -56,25 +53,35 @@ export default function SeedScreen() {
   };
 
   return (
-    <AppScreen title="Datos demo" subtitle="Pantalla temporal de desarrollo para preparar pruebas con conductores.">
+    <AppScreen>
+      <View style={styles.warningBox}>
+        <Text style={styles.warningTitle}>⚠ Pantalla temporal de desarrollo</Text>
+        <Text style={styles.warningText}>No incluir en builds de producción.</Text>
+      </View>
+
       <View style={styles.actions}>
-        <AppButton title="Crear datos demo" onPress={handleSeed} loading={isSeeding} />
-        <AppButton title="Borrar datos demo" variant="danger" onPress={handleClear} loading={isClearing} />
+        <AppButton label="Crear datos demo" onPress={handleSeed} loading={isSeeding} fullWidth />
+        <AppButton label="Limpiar datos demo" variant="danger" onPress={handleClear} loading={isClearing} fullWidth />
       </View>
 
       {!seedResult ? (
-        <AppEmptyState title="Sin códigos cargados" message="Crea los datos demo para ver los códigos de acceso." />
+        <AppEmptyState
+          title="Sin códigos cargados"
+          message="Crea los datos demo para ver los códigos de acceso."
+        />
       ) : null}
 
       <View style={styles.list}>
         {seedResult?.accessCodes.map((accessCode) => (
           <AppCard key={accessCode.code}>
-            <View style={styles.codeHeader}>
-              <View style={styles.codeText}>
+            <View style={styles.codeRow}>
+              <View style={styles.codeInfo}>
                 <Text style={styles.code}>{accessCode.code}</Text>
                 <Text style={styles.meta}>{accessCode.companyName}</Text>
-                {accessCode.driverName ? <Text style={styles.meta}>{accessCode.driverName}</Text> : null}
-                <Text style={styles.meta}>{roleLabels[accessCode.role]}</Text>
+                {accessCode.driverName ? (
+                  <Text style={styles.meta}>{accessCode.driverName}</Text>
+                ) : null}
+                <Text style={styles.meta}>{roleLabels[accessCode.role] ?? accessCode.role}</Text>
               </View>
               <StatusBadge status={accessCode.status} />
             </View>
@@ -86,28 +93,49 @@ export default function SeedScreen() {
 }
 
 const styles = StyleSheet.create({
+  warningBox: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: radius.btn,
+    borderWidth: 1.5,
+    padding: spacing[4],
+  },
+  warningTitle: {
+    color: colors.error,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.base,
+  },
+  warningText: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    marginTop: 4,
+  },
   actions: {
-    gap: spacing.md,
+    gap: spacing[3],
   },
   list: {
-    gap: spacing.md,
+    gap: spacing[3],
   },
-  codeHeader: {
+  codeRow: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing[3],
     justifyContent: 'space-between',
   },
-  codeText: {
+  codeInfo: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 4,
   },
   code: {
-    ...typography.cardTitle,
-    color: colors.text,
+    color: colors.brand500,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.base,
+    letterSpacing: 2,
   },
   meta: {
-    ...typography.body,
-    color: colors.textMuted,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
 });

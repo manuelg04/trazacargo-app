@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AppButton } from '@/src/components/AppButton';
 import { AppInput } from '@/src/components/AppInput';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, radius, spacing } from '@/constants/theme';
 
 type AuthMode = 'signIn' | 'signUp';
 
@@ -45,55 +43,76 @@ export function AuthForm({ mode, loading, error, onSubmit, onSwitchMode }: AuthF
     await onSubmit(normalizedEmail, password);
   };
 
+  const displayError = localError ?? error;
+
   return (
     <View style={styles.container}>
       <AppInput
-        nativeID="auth-email"
-        label="Correo"
+        label="Correo electrónico"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
-        autoCorrect={false}
         keyboardType="email-address"
-        textContentType="emailAddress"
         placeholder="correo@empresa.com"
+        icon={<Text style={styles.inputIcon}>📧</Text>}
       />
       <AppInput
-        nativeID="auth-password"
         label="Contraseña"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        textContentType={isSignUp ? 'newPassword' : 'password'}
         placeholder="Mínimo 8 caracteres"
+        icon={<Text style={styles.inputIcon}>🔒</Text>}
       />
       {isSignUp ? (
         <AppInput
-          nativeID="auth-confirm-password"
           label="Confirmar contraseña"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
-          textContentType="newPassword"
           placeholder="Repite tu contraseña"
+          icon={<Text style={styles.inputIcon}>🔒</Text>}
         />
       ) : null}
-      {localError || error ? <Text style={styles.error}>{localError ?? error}</Text> : null}
-      <AppButton title={isSignUp ? 'Crear cuenta' : 'Ingresar'} onPress={handleSubmit} loading={loading} />
-      <Pressable accessibilityRole="button" onPress={onSwitchMode} style={styles.switchButton}>
-        <Text style={styles.switchText}>{isSignUp ? 'Ya tengo cuenta' : 'Crear cuenta'}</Text>
-      </Pressable>
+      {displayError ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>⚠ {displayError}</Text>
+        </View>
+      ) : null}
+      <AppButton
+        label={isSignUp ? 'Crear cuenta' : 'Ingresar'}
+        onPress={handleSubmit}
+        loading={loading}
+        size="lg"
+        fullWidth
+      />
+      <TouchableOpacity onPress={onSwitchMode} activeOpacity={0.7} style={styles.switchButton}>
+        <Text style={styles.switchText}>
+          {isSignUp ? '¿Ya tienes cuenta? Iniciar sesión' : '¿No tienes cuenta? Crear cuenta'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    gap: spacing[3],
   },
-  error: {
-    ...typography.body,
-    color: colors.danger,
+  inputIcon: {
+    fontSize: 16,
+  },
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: radius.btn,
+    borderWidth: 1,
+    padding: spacing[3],
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
   },
   switchButton: {
     alignItems: 'center',
@@ -101,8 +120,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   switchText: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '700',
+    color: colors.brand600,
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
   },
 });

@@ -2,16 +2,15 @@ import { useAuthActions } from '@convex-dev/auth/react';
 import { useMutation } from 'convex/react';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
-import { AppButton } from '@/src/components/AppButton';
+import { copy } from '@/constants/copy';
+import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
-import { AccessCodeForm } from '@/src/features/onboarding/AccessCodeForm';
 import { useCurrentProfile } from '@/src/features/auth/useCurrentProfile';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { AccessCodeForm } from '@/src/features/onboarding/AccessCodeForm';
 
 export default function AccessCodeScreen() {
   const { signOut } = useAuthActions();
@@ -64,13 +63,32 @@ export default function AccessCodeScreen() {
   };
 
   return (
-    <AppScreen title="Activar acceso" subtitle="Ingresa el código de acceso que te entregó la empresa de transporte.">
-      <AccessCodeForm loading={submitting} error={error} onSubmit={handleRedeem} />
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Si el código no funciona, pide uno nuevo a tu empresa.</Text>
-        <AppButton title="Cerrar sesión" variant="secondary" onPress={handleSignOut} />
-      </View>
-    </AppScreen>
+    <View style={styles.container}>
+      <SafeAreaView edges={['top']} style={styles.topZone}>
+        <View style={styles.topContent}>
+          <Text style={styles.keyIcon}>🔑</Text>
+          <Text style={styles.topTitle}>Código de acceso</Text>
+        </View>
+      </SafeAreaView>
+
+      <ScrollView
+        style={styles.bottomZone}
+        contentContainerStyle={styles.formContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            Ingresa el código de acceso que te entregó la empresa de transporte.
+          </Text>
+        </View>
+
+        <AccessCodeForm loading={submitting} error={error} onSubmit={handleRedeem} />
+
+        <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
+          <Text style={styles.signOutText}>Cerrar sesión</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -78,26 +96,65 @@ function getAccessCodeErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : '';
 
   if (message.includes('usado')) {
-    return 'Código usado.';
+    return copy.codeUsed;
   }
 
   if (message.includes('expiró')) {
-    return 'Código expirado.';
+    return copy.codeExpired;
   }
 
-  if (message.includes('perfil')) {
-    return message;
-  }
-
-  return 'Código inválido.';
+  return copy.codeInvalid;
 }
 
 const styles = StyleSheet.create({
-  footer: {
-    gap: spacing.md,
+  container: {
+    flex: 1,
   },
-  footerText: {
-    ...typography.body,
-    color: colors.textMuted,
+  topZone: {
+    backgroundColor: colors.brand500,
+  },
+  topContent: {
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingBottom: spacing[8],
+    paddingHorizontal: spacing[6],
+    paddingTop: spacing[12],
+  },
+  keyIcon: {
+    fontSize: 40,
+  },
+  topTitle: {
+    color: colors.textInverse,
+    fontFamily: fontFamily.extrabold,
+    fontSize: fontSize.xl,
+  },
+  bottomZone: {
+    backgroundColor: colors.bgCanvas,
+    flex: 1,
+  },
+  formContent: {
+    gap: spacing[4],
+    padding: spacing[6],
+  },
+  infoBox: {
+    backgroundColor: colors.infoBg,
+    borderColor: colors.infoBd,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: spacing[4],
+  },
+  infoText: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+  },
+  signOutButton: {
+    alignItems: 'center',
+    paddingVertical: spacing[2],
+  },
+  signOutText: {
+    color: colors.textTertiary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
 });
