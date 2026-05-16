@@ -10,8 +10,10 @@ import { AppErrorState } from '@/src/components/AppErrorState';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { CompanyDocumentUploadPanel } from '@/src/features/documents/CompanyDocumentUploadPanel';
+import { DocumentCard, TripDocumentView } from '@/src/features/documents/DocumentCard';
+import { DocumentReviewPanel } from '@/src/features/documents/DocumentReviewPanel';
 import { TripOfferPanel } from '@/src/features/dispatcher/TripOfferPanel';
-import { TripDocumentList } from '@/src/features/trips/TripDocumentList';
 import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { TripHeader } from '@/src/features/trips/TripHeader';
 import { colors } from '@/src/theme/colors';
@@ -91,6 +93,9 @@ export default function DispatcherTripDetailScreen() {
   const canCancel = detail.trip.status !== 'CANCELLED' && detail.trip.status !== 'CLOSED';
   const activeDrivers = drivers.filter((driver) => driver.status === 'ACTIVE');
   const driverName = detail.acceptedDriver?.fullName ?? detail.assignedDriver?.fullName ?? 'Sin conductor';
+  const documents = detail.documents as TripDocumentView[];
+  const companyDocuments = documents.filter((document) => document.direction === 'COMPANY_TO_DRIVER');
+  const driverDocuments = documents.filter((document) => document.direction === 'DRIVER_TO_COMPANY');
 
   return (
     <AppScreen>
@@ -156,8 +161,24 @@ export default function DispatcherTripDetailScreen() {
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Documentos</Text>
-        <TripDocumentList documents={detail.documents} />
+        <Text style={styles.sectionTitle}>Documentos para el conductor</Text>
+        <CompanyDocumentUploadPanel tripId={resolvedTripId} />
+        {companyDocuments.length === 0 ? (
+          <AppCard>
+            <Text style={styles.emptyText}>Este viaje todavía no tiene documentos para el conductor.</Text>
+          </AppCard>
+        ) : (
+          <View style={styles.documentList}>
+            {companyDocuments.map((document) => (
+              <DocumentCard key={document._id} document={document} showDirection={false} />
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Documentos recibidos del conductor</Text>
+        <DocumentReviewPanel documents={driverDocuments} />
       </View>
 
       <View style={styles.section}>
@@ -202,9 +223,17 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing.md,
   },
+  documentList: {
+    gap: spacing.md,
+  },
   sectionTitle: {
     ...typography.sectionTitle,
     color: colors.text,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   offerList: {
     gap: spacing.sm,

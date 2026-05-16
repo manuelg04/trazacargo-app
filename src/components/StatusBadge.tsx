@@ -22,6 +22,7 @@ const statusToneByValue: Record<string, { backgroundColor: string; color: string
   DISABLED: { backgroundColor: colors.dangerSoft, color: colors.danger },
   REJECTED: { backgroundColor: colors.dangerSoft, color: colors.danger },
   EXPIRED: { backgroundColor: colors.dangerSoft, color: colors.danger },
+  ARCHIVED: { backgroundColor: colors.neutralSoft, color: colors.textMuted },
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {

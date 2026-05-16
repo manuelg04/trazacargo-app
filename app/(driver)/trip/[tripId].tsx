@@ -11,7 +11,8 @@ import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { operationalEventActions, TripEventType } from '@/src/constants/tripEvents';
-import { TripDocumentList } from '@/src/features/trips/TripDocumentList';
+import { DocumentCard, TripDocumentView } from '@/src/features/documents/DocumentCard';
+import { DriverDocumentUploadPanel } from '@/src/features/documents/DriverDocumentUploadPanel';
 import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { TripHeader } from '@/src/features/trips/TripHeader';
 import { colors } from '@/src/theme/colors';
@@ -73,6 +74,10 @@ export default function TripDetailScreen() {
     );
   }
 
+  const documents = detail.documents as TripDocumentView[];
+  const companyDocuments = documents.filter((document) => document.direction === 'COMPANY_TO_DRIVER');
+  const driverDocuments = documents.filter((document) => document.direction === 'DRIVER_TO_COMPANY');
+
   return (
     <AppScreen>
       <AppCard>
@@ -133,9 +138,36 @@ export default function TripDetailScreen() {
       ) : null}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Documentos</Text>
-        <TripDocumentList documents={detail.documents} />
+        <Text style={styles.sectionTitle}>Documentos de la empresa</Text>
+        {companyDocuments.length === 0 ? (
+          <AppCard>
+            <Text style={styles.emptyText}>Este viaje todavía no tiene documentos de la empresa.</Text>
+          </AppCard>
+        ) : (
+          <View style={styles.documentList}>
+            {companyDocuments.map((document) => (
+              <DocumentCard key={document._id} document={document} showDirection={false} />
+            ))}
+          </View>
+        )}
       </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Mis documentos enviados</Text>
+        {driverDocuments.length === 0 ? (
+          <AppCard>
+            <Text style={styles.emptyText}>Todavía no has enviado documentos para este viaje.</Text>
+          </AppCard>
+        ) : (
+          <View style={styles.documentList}>
+            {driverDocuments.map((document) => (
+              <DocumentCard key={document._id} document={document} showDirection={false} />
+            ))}
+          </View>
+        )}
+      </View>
+
+      {detail.access.belongsToDriver ? <DriverDocumentUploadPanel tripId={resolvedTripId} documents={driverDocuments} /> : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Eventos</Text>
@@ -164,9 +196,17 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing.md,
   },
+  documentList: {
+    gap: spacing.md,
+  },
   sectionTitle: {
     ...typography.sectionTitle,
     color: colors.text,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   actions: {
     gap: spacing.sm,
