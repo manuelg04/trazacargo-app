@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { colors, fontFamily, fontSize, roleLabels, spacing } from '@/constants/theme';
@@ -52,9 +53,9 @@ export default function AccessCodesScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
+      <SafeAreaView style={styles.header} edges={['top']}>
         <Text style={styles.headerTitle}>Accesos</Text>
-      </View>
+      </SafeAreaView>
       <AppScreen>
         <View style={styles.warningBox}>
           <Text style={styles.warningText}>⚠ Los códigos son visibles en modo MVP/dev. No compartir en producción.</Text>

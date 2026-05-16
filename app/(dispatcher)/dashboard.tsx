@@ -1,6 +1,7 @@
 import { useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppButton } from '@/src/components/AppButton';
@@ -17,10 +18,10 @@ export default function DispatcherDashboardScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
+      <SafeAreaView style={styles.header} edges={['top']}>
         <Text style={styles.headerTitle}>{companyName}</Text>
         <Text style={styles.headerSubtitle}>Consola operativa</Text>
-      </View>
+      </SafeAreaView>
       <AppScreen>
         {stats === undefined ? <AppLoading message="Cargando dashboard" /> : null}
         {stats ? (

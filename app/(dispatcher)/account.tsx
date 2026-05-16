@@ -1,6 +1,7 @@
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
@@ -34,7 +35,7 @@ export default function DispatcherAccountScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
+      <SafeAreaView style={styles.header} edges={['top']}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
@@ -42,7 +43,7 @@ export default function DispatcherAccountScreen() {
           <Text style={styles.headerEmail} numberOfLines={1}>{email}</Text>
           <Text style={styles.headerCompany} numberOfLines={1}>{companyName}</Text>
         </View>
-      </View>
+      </SafeAreaView>
       <AppScreen>
         <AppCard>
           <View style={styles.row}>

@@ -2,6 +2,7 @@ import { useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { colors, fontFamily, fontSize, spacing, tripStateLabels } from '@/constants/theme';
@@ -25,7 +26,7 @@ export default function DispatcherTripsScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
+      <SafeAreaView style={styles.header} edges={['top']}>
         <Text style={styles.headerTitle}>Viajes</Text>
         <AppButton
           label="+ Crear viaje"
@@ -33,7 +34,7 @@ export default function DispatcherTripsScreen() {
           variant="primary"
           onPress={() => router.push('/(dispatcher)/create-trip')}
         />
-      </View>
+      </SafeAreaView>
       <AppScreen>
         <ScrollView
           horizontal

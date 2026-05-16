@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
@@ -71,9 +72,9 @@ export default function DispatcherDriversScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
+      <SafeAreaView style={styles.header} edges={['top']}>
         <Text style={styles.headerTitle}>Conductores</Text>
-      </View>
+      </SafeAreaView>
       <AppScreen>
         {error ? (
           <View style={styles.errorBox}>

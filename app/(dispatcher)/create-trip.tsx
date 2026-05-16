@@ -2,6 +2,7 @@ import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppScreen } from '@/src/components/AppScreen';
@@ -29,10 +30,10 @@ export default function CreateTripScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
+      <SafeAreaView style={styles.header} edges={['top']}>
         <Text style={styles.headerTitle}>Crear viaje</Text>
         <Text style={styles.headerSubtitle}>Registra un viaje para ofertarlo</Text>
-      </View>
+      </SafeAreaView>
       <AppScreen>
         {error ? (
           <View style={styles.errorBox}>
