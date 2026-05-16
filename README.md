@@ -1,50 +1,106 @@
-# Welcome to your Expo app 👋
+# TrazaCargo
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+TrazaCargo is a mobile app foundation for cargo transport companies and truck drivers in Colombia. This phase builds the first working driver flow with demo data in Convex.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- Expo SDK 54
+- React Native
+- TypeScript
+- Expo Router
+- Convex
+- npm
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Install
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Environment
 
-## Learn more
+Create `.env.local` from `.env.example` and set the Convex URL:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+EXPO_PUBLIC_CONVEX_URL=https://scintillating-bulldog-845.convex.cloud
+CONVEX_DEPLOYMENT=dev:scintillating-bulldog-845
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Run Convex
 
-## Join the community
+```bash
+npx convex dev
+```
 
-Join our community of developers creating universal apps.
+Keep this running while you work. It syncs the backend functions and keeps generated types updated.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Run Expo
+
+In another terminal:
+
+```bash
+npm run start
+```
+
+You can also run:
+
+```bash
+npm run ios
+npm run android
+npm run web
+```
+
+## Test on iPhone with Expo Go
+
+1. Install Expo Go on the iPhone.
+2. Run `npm run start`.
+3. Scan the QR code shown by Expo.
+4. Make sure the phone and computer are on the same network.
+5. If the network blocks local connections, switch Expo to tunnel mode from the terminal menu.
+
+## Demo Data
+
+Open the app, go to the temporary driver selection screen, and press `Crear datos demo`.
+
+The demo seed creates:
+
+- One demo company in Bucaramanga
+- Two active drivers
+- One active vehicle
+- Three demo trips
+- Trip offers for the demo drivers
+- Demo documents for each trip
+- An initial accepted event for one trip
+
+You can remove only this demo data with `Borrar datos demo`.
+
+## Included In This Phase
+
+- Temporary driver selection
+- Convex schema and backend functions
+- Driver offer list
+- Accept trip flow
+- Accepted trip list
+- Trip detail screen
+- Demo documents
+- Operational event registration
+- Reactive updates from Convex
+
+## Not Included In This Phase
+
+- Real authentication
+- Real file upload
+- GPS capture
+- Push notifications
+- Dispatcher web panel
+- Production document management
+- Role permissions
+
+## Suggested Phase 2
+
+- Add real authentication and company membership
+- Add dispatcher assignment rules
+- Add document upload with Convex file storage
+- Add event-level GPS capture
+- Add notification triggers for dispatchers and drivers
+- Add a web panel for dispatchers

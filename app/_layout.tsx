@@ -1,24 +1,41 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { ThemeProvider, DefaultTheme } from '@react-navigation/native';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { DevSessionProvider } from '@/src/features/devSession/DevSessionContext';
+import { colors } from '@/src/theme/colors';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
-export const unstable_settings = {
-  anchor: '(tabs)',
+if (!convexUrl) {
+  throw new Error('Missing EXPO_PUBLIC_CONVEX_URL');
+}
+
+const convex = new ConvexReactClient(convexUrl, {
+  unsavedChangesWarning: false,
+});
+
+const navigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: colors.background,
+    card: colors.surface,
+    primary: colors.primary,
+    text: colors.text,
+    border: colors.border,
+  },
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ConvexProvider client={convex}>
+      <DevSessionProvider>
+        <ThemeProvider value={navigationTheme}>
+          <Stack screenOptions={{ headerShown: false }} />
+          <StatusBar style="dark" />
+        </ThemeProvider>
+      </DevSessionProvider>
+    </ConvexProvider>
   );
 }
