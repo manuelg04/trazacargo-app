@@ -20,6 +20,9 @@ const demoDrivers = [
   },
 ] as const;
 
+const demoDispatcherAccessCode = 'TC-DESPACHO-2026';
+const demoAdminAccessCode = 'TC-ADMIN-2026';
+
 const demoAccessCodeReturn = v.object({
   code: v.string(),
   status: accessCodeStatusValidator,
@@ -110,9 +113,33 @@ export const seedDemoData = mutation({
     created = (await createDemoDocuments(ctx, companyId, secondDriverTripResult.tripId, now)) || created;
     created = (await ensureAcceptedEvent(ctx, companyId, acceptedTripResult.tripId, firstDriverResult.driverId, now)) || created;
 
-    const firstCode = await ensureDemoAccessCode(ctx, companyId, firstDriverResult.driverId, demoDrivers[0].accessCode, now);
-    const secondCode = await ensureDemoAccessCode(ctx, companyId, secondDriverResult.driverId, demoDrivers[1].accessCode, now);
-    created = created || firstCode.created || secondCode.created;
+    const firstCode = await ensureDemoAccessCode(ctx, {
+      companyId,
+      driverId: firstDriverResult.driverId,
+      role: 'DRIVER',
+      code: demoDrivers[0].accessCode,
+      now,
+    });
+    const secondCode = await ensureDemoAccessCode(ctx, {
+      companyId,
+      driverId: secondDriverResult.driverId,
+      role: 'DRIVER',
+      code: demoDrivers[1].accessCode,
+      now,
+    });
+    const dispatcherCode = await ensureDemoAccessCode(ctx, {
+      companyId,
+      role: 'DISPATCHER',
+      code: demoDispatcherAccessCode,
+      now,
+    });
+    const adminCode = await ensureDemoAccessCode(ctx, {
+      companyId,
+      role: 'ADMIN',
+      code: demoAdminAccessCode,
+      now,
+    });
+    created = created || firstCode.created || secondCode.created || dispatcherCode.created || adminCode.created;
 
     return {
       created,
@@ -130,6 +157,18 @@ export const seedDemoData = mutation({
           status: secondCode.accessCode.status,
           role: secondCode.accessCode.role,
           driverName: demoDrivers[1].fullName,
+          companyName: demoCompanyName,
+        },
+        {
+          code: dispatcherCode.accessCode.code,
+          status: dispatcherCode.accessCode.status,
+          role: dispatcherCode.accessCode.role,
+          companyName: demoCompanyName,
+        },
+        {
+          code: adminCode.accessCode.code,
+          status: adminCode.accessCode.status,
+          role: adminCode.accessCode.role,
           companyName: demoCompanyName,
         },
       ],
@@ -471,30 +510,57 @@ async function ensureAcceptedEvent(
   return true;
 }
 
-async function ensureDemoAccessCode(
-  ctx: MutationCtx,
-  companyId: Id<'companies'>,
-  driverId: Id<'drivers'>,
-  code: string,
-  now: number,
-) {
+type DemoAccessCodeInput = {
+  companyId: Id<'companies'>;
+  driverId?: Id<'drivers'>;
+  role: 'DRIVER' | 'DISPATCHER' | 'ADMIN';
+  code: string;
+  now: number;
+};
+
+async function ensureDemoAccessCode(ctx: MutationCtx, input: DemoAccessCodeInput) {
   const existingAccessCode = await ctx.db
     .query('accessCodes')
-    .withIndex('by_code', (q) => q.eq('code', code))
+    .withIndex('by_code', (q) => q.eq('code', input.code))
     .first();
 
   if (existingAccessCode) {
+    if (
+      existingAccessCode.companyId !== input.companyId ||
+      existingAccessCode.driverId !== input.driverId ||
+      existingAccessCode.role !== input.role ||
+      existingAccessCode.status !== 'ACTIVE'
+    ) {
+      await ctx.db.patch(existingAccessCode._id, {
+        companyId: input.companyId,
+        driverId: input.driverId,
+        role: input.role,
+        status: 'ACTIVE',
+        expiresAt: undefined,
+        usedByUserId: undefined,
+        usedAt: undefined,
+        updatedAt: input.now,
+      });
+      const updatedAccessCode = await ctx.db.get(existingAccessCode._id);
+
+      if (!updatedAccessCode) {
+        throw new Error('No se pudo actualizar el código demo.');
+      }
+
+      return { accessCode: updatedAccessCode, created: true };
+    }
+
     return { accessCode: existingAccessCode, created: false };
   }
 
   const accessCodeId = await ctx.db.insert('accessCodes', {
-    companyId,
-    driverId,
-    role: 'DRIVER',
-    code,
+    companyId: input.companyId,
+    driverId: input.driverId,
+    role: input.role,
+    code: input.code,
     status: 'ACTIVE',
-    createdAt: now,
-    updatedAt: now,
+    createdAt: input.now,
+    updatedAt: input.now,
   });
   const accessCode = await ctx.db.get(accessCodeId);
 

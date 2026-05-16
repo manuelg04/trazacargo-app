@@ -1,6 +1,6 @@
 # TrazaCargo
 
-TrazaCargo is an Expo mobile app foundation for Colombian cargo transport companies and truck drivers. Phase 2 adds real email/password access with Convex Auth and links each signed-in user to an operational company and driver profile.
+TrazaCargo es una app Expo para empresas colombianas de transporte de carga, despachadores, administradores y conductores. La fase 3 mantiene el flujo móvil del conductor y agrega una consola básica de empresa dentro de la misma app Expo.
 
 ## Stack
 
@@ -12,44 +12,54 @@ TrazaCargo is an Expo mobile app foundation for Colombian cargo transport compan
 - Convex Auth
 - npm
 
-## Install
+## Qué Incluye La Fase 3
+
+- Consola de empresa para roles `DISPATCHER` y `ADMIN`
+- Dashboard básico de viajes, conductores y ofertas
+- Listado y creación de conductores
+- Generación de códigos de acceso para conductores
+- Listado de códigos de acceso de la empresa
+- Creación de códigos `DISPATCHER` y `ADMIN` desde un perfil `ADMIN`
+- Listado y creación de viajes
+- Oferta de viajes a uno o varios conductores
+- Detalle de viaje desde el lado empresa
+- Visualización de documentos demo y eventos del viaje
+- Cambio de estado cuando un conductor acepta una oferta
+- Permisos backend por empresa y rol
+- Flujo existente del conductor con Convex Auth
+
+## Instalar
 
 ```bash
 npm install
 ```
 
-## Environment
+## Variables Locales
 
-Create `.env.local` from `.env.example` and set the local Convex values:
+Crea `.env.local` desde `.env.example` y usa los valores locales de Convex:
 
 ```bash
 EXPO_PUBLIC_CONVEX_URL=https://scintillating-bulldog-845.convex.cloud
 CONVEX_DEPLOYMENT=dev:scintillating-bulldog-845
 ```
 
-Convex Auth stores its JWT keys in the Convex deployment environment. Run the initializer again only if you create a new Convex deployment:
+Las llaves JWT de Convex Auth viven en el entorno del despliegue de Convex. No se agregan a `.env.example`.
 
-```bash
-npx @convex-dev/auth
-```
+## Correr El Proyecto
 
-## Run Convex
+En una terminal:
 
 ```bash
 npx convex dev
 ```
 
-Keep this running while you work. It syncs backend functions and keeps generated types updated.
-
-## Run Expo
-
-In another terminal:
+En otra terminal:
 
 ```bash
 npm run start
 ```
 
-You can also run:
+También puedes correr:
 
 ```bash
 npm run ios
@@ -57,80 +67,86 @@ npm run android
 npm run web
 ```
 
-## Demo Data
+## Datos Demo
 
-Seed the demo company, drivers, trips, offers, documents, events, and access codes:
+Para crear empresa demo, conductores, viajes, ofertas, documentos, eventos y códigos:
 
 ```bash
 npx convex run dev:seedDemoData
 ```
 
-The development screen is also available at `/(dev)/seed` inside the app.
+Códigos demo actuales:
 
-Current demo driver codes:
+- Conductor Carlos Rueda: `TC-CARLOS-2026`
+- Conductor Julian Mendoza: `TC-JULIAN-2026`
+- Despachador: `TC-DESPACHO-2026`
+- Administrador: `TC-ADMIN-2026`
 
-- `TC-CARLOS-2026`
-- `TC-JULIAN-2026`
+La pantalla temporal `/(dev)/seed` también permite crear o limpiar datos demo desde la app.
 
-Clear only the demo domain data with:
+Para limpiar datos demo del dominio sin borrar usuarios internos de Convex Auth:
 
 ```bash
 npx convex run dev:clearDemoData
 ```
 
-This does not delete Convex Auth users.
+## Probar Flujo Dispatcher
 
-## Test The Auth Flow
+1. Ejecuta `npx convex dev`.
+2. Ejecuta `npm run start`.
+3. Ejecuta `npx convex run dev:seedDemoData`.
+4. Crea una cuenta nueva con email y contraseña.
+5. Redime `TC-DESPACHO-2026` o `TC-ADMIN-2026`.
+6. Confirma que entras al dashboard de empresa.
+7. Ve a `Conductores` y crea un conductor.
+8. Genera un código de acceso para ese conductor.
+9. Ve a `Viajes` y crea un viaje.
+10. Abre el detalle del viaje.
+11. Selecciona uno o varios conductores.
+12. Presiona `Ofertar viaje`.
 
-1. Run `npx convex dev`.
-2. Run `npm run start`.
-3. Open the app.
-4. Confirm an unauthenticated user lands on `Ingresar`.
-5. Create an account with email and password.
-6. Confirm the app asks for an access code.
-7. Seed demo data if needed.
-8. Redeem a demo code.
-9. Confirm the driver lands on `Ofertas`.
-10. Accept an offered trip.
-11. Confirm it appears in `Mis viajes`.
-12. Open the trip detail.
-13. Confirm demo documents and timeline events are visible.
-14. Register an operational event.
-15. Open `Cuenta` and sign out.
-16. Confirm the app returns to `Ingresar`.
+## Probar Aceptación Desde Conductor
 
-## Included In Phase 2
+1. Cierra sesión desde la cuenta dispatcher/admin.
+2. Crea una cuenta nueva para conductor.
+3. Redime el código generado para ese conductor.
+4. Confirma que el conductor ve la oferta en `Ofertas`.
+5. Acepta el viaje.
+6. Abre el detalle del viaje y registra un evento operativo.
+7. Cierra sesión.
+8. Ingresa otra vez como dispatcher/admin.
+9. Abre el detalle del viaje.
+10. Confirma que el estado está aceptado, que aparece el conductor y que el timeline muestra eventos.
 
-- Convex Auth email/password sign-in and sign-up
-- Authenticated route flow
-- Access code activation
-- User profile linking to company and driver
-- Protected Convex trip, document, and event functions
-- Driver offers without sending `driverId` from the frontend
-- Account screen with logout
-- Temporary demo seed screen with access codes
-- Updated demo seeding and cleanup
+## Seguridad Y Permisos De Esta Fase
 
-## Not Included In This Phase
+- El frontend no envía `companyId`.
+- Las funciones de empresa derivan `companyId` desde el perfil autenticado.
+- `DRIVER` no puede usar funciones de dispatcher/admin.
+- `DISPATCHER` y `ADMIN` solo operan datos de su empresa.
+- Los viajes, conductores, vehículos, documentos, eventos y códigos se validan por empresa.
+- Los códigos se muestran en UI porque esta fase es MVP/dev. En producción deben endurecerse los flujos de emisión, visibilidad y expiración.
 
-- Real file upload
+## No Incluye Esta Fase
+
+- Subida real de archivos
+- Convex Storage
 - GPS
 - Push notifications
-- Dispatcher web panel
-- Marketplace
-- Payments
-- RNDC integration
-- Live tracking
-- SMS login
-- OAuth with Google or Apple
-- Password reset
-- Email verification
-- Email notifications
-- Final production security hardening
+- Panel web con Next.js
+- Monorepo
+- Pagos
+- Marketplace público
+- Integración RNDC
+- Tracking en vivo
+- Aprobación o rechazo documental real
+- OCR o IA
+- Facturación
+- Seguridad final de producción
 
-## Verification
+## Verificación
 
-Before reporting changes as done, run:
+Antes de reportar cambios como terminados:
 
 ```bash
 npm install
@@ -139,8 +155,8 @@ npm run typecheck
 npm run lint
 ```
 
-For route or visual changes, also open the app through Expo Go, a simulator, or the web preview and walk through the affected flow.
+Para cambios visuales o de navegación, abre la app en Expo Go, simulador o web preview y recorre el flujo afectado.
 
-## Suggested Phase 3
+## Fase 4 Sugerida
 
-Add real document upload with Convex file storage, including driver document submission states and dispatcher review support.
+Gestión documental real con Convex Storage: carga de documentos por conductor, metadatos por tipo documental, revisión por empresa y estados de aprobación.
