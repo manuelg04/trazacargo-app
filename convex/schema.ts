@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
+import { authTables } from '@convex-dev/auth/server';
 
 export const companyStatusValidator = v.union(v.literal('ACTIVE'), v.literal('INACTIVE'));
 
@@ -63,7 +64,19 @@ export const tripEventTypeValidator = v.union(
   v.literal('ISSUE_REPORTED'),
 );
 
+export const userRoleValidator = v.union(v.literal('DRIVER'), v.literal('DISPATCHER'), v.literal('ADMIN'));
+
+export const userProfileStatusValidator = v.union(v.literal('ACTIVE'), v.literal('DISABLED'));
+
+export const accessCodeStatusValidator = v.union(
+  v.literal('ACTIVE'),
+  v.literal('USED'),
+  v.literal('DISABLED'),
+  v.literal('EXPIRED'),
+);
+
 export default defineSchema({
+  ...authTables,
   companies: defineTable({
     name: v.string(),
     city: v.string(),
@@ -158,4 +171,34 @@ export default defineSchema({
     .index('by_trip', ['tripId'])
     .index('by_trip_and_occurred_at', ['tripId', 'occurredAt'])
     .index('by_trip_and_type', ['tripId', 'eventType']),
+  userProfiles: defineTable({
+    userId: v.id('users'),
+    companyId: v.id('companies'),
+    driverId: v.optional(v.id('drivers')),
+    role: userRoleValidator,
+    status: userProfileStatusValidator,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_company', ['companyId'])
+    .index('by_driver', ['driverId'])
+    .index('by_user_and_status', ['userId', 'status']),
+  accessCodes: defineTable({
+    companyId: v.id('companies'),
+    driverId: v.optional(v.id('drivers')),
+    role: userRoleValidator,
+    code: v.string(),
+    status: accessCodeStatusValidator,
+    expiresAt: v.optional(v.number()),
+    usedByUserId: v.optional(v.id('users')),
+    usedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_code', ['code'])
+    .index('by_company', ['companyId'])
+    .index('by_driver', ['driverId'])
+    .index('by_status', ['status'])
+    .index('by_company_and_status', ['companyId', 'status']),
 });

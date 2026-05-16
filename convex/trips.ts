@@ -10,6 +10,7 @@ import {
   tripStatusValidator,
   uploadedByTypeValidator,
 } from './schema';
+import { assertDriverCanAccessTrip, requireDriverProfile } from './lib/auth';
 
 const companyReturn = v.object({
   _id: v.id('companies'),
@@ -81,22 +82,25 @@ const tripEventReturn = v.object({
   driverName: v.optional(v.string()),
 });
 
-export const listAvailableForDriver = query({
-  args: {
-    driverId: v.id('drivers'),
-  },
+export const listAvailableForCurrentDriver = query({
+  args: {},
   returns: v.array(availableTripReturn),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const { profile, driverId } = await requireDriverProfile(ctx);
     const offers = await ctx.db
       .query('tripOffers')
-      .withIndex('by_driver_and_status', (q) => q.eq('driverId', args.driverId).eq('status', 'PENDING'))
+      .withIndex('by_driver_and_status', (q) => q.eq('driverId', driverId).eq('status', 'PENDING'))
       .collect();
     const results: (Doc<'trips'> & { company: Doc<'companies'>; offerStatus: Doc<'tripOffers'>['status'] })[] = [];
 
     for (const offer of offers) {
+      if (offer.companyId !== profile.companyId) {
+        continue;
+      }
+
       const trip = await ctx.db.get(offer.tripId);
 
-      if (!trip || trip.status !== 'OFFERED') {
+      if (!trip || trip.companyId !== profile.companyId || trip.status !== 'OFFERED') {
         continue;
       }
 
@@ -115,28 +119,31 @@ export const listAvailableForDriver = query({
   },
 });
 
-export const listMine = query({
-  args: {
-    driverId: v.id('drivers'),
-  },
+export const listMineForCurrentDriver = query({
+  args: {},
   returns: v.array(tripWithCompanyReturn),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const { profile, driverId } = await requireDriverProfile(ctx);
     const acceptedTrips = await ctx.db
       .query('trips')
-      .withIndex('by_accepted_driver', (q) => q.eq('acceptedByDriverId', args.driverId))
+      .withIndex('by_accepted_driver', (q) => q.eq('acceptedByDriverId', driverId))
       .collect();
     const assignedTrips = await ctx.db
       .query('trips')
-      .withIndex('by_assigned_driver', (q) => q.eq('assignedDriverId', args.driverId))
+      .withIndex('by_assigned_driver', (q) => q.eq('assignedDriverId', driverId))
       .collect();
     const tripsById = new Map<Id<'trips'>, Doc<'trips'>>();
 
     for (const trip of acceptedTrips) {
-      tripsById.set(trip._id, trip);
+      if (trip.companyId === profile.companyId) {
+        tripsById.set(trip._id, trip);
+      }
     }
 
     for (const trip of assignedTrips) {
-      tripsById.set(trip._id, trip);
+      if (trip.companyId === profile.companyId) {
+        tripsById.set(trip._id, trip);
+      }
     }
 
     const results: (Doc<'trips'> & { company: Doc<'companies'> })[] = [];
@@ -153,45 +160,27 @@ export const listMine = query({
   },
 });
 
-export const getDetail = query({
+export const getDetailForCurrentDriver = query({
   args: {
     tripId: v.id('trips'),
-    driverId: v.id('drivers'),
   },
-  returns: v.union(
-    v.null(),
-    v.object({
-      trip: v.object(tripFields),
-      company: companyReturn,
-      documents: v.array(tripDocumentReturn),
-      events: v.array(tripEventReturn),
-      access: v.object({
-        hasPendingOffer: v.boolean(),
-        belongsToDriver: v.boolean(),
-      }),
+  returns: v.object({
+    trip: v.object(tripFields),
+    company: companyReturn,
+    documents: v.array(tripDocumentReturn),
+    events: v.array(tripEventReturn),
+    access: v.object({
+      hasPendingOffer: v.boolean(),
+      belongsToDriver: v.boolean(),
     }),
-  ),
+  }),
   handler: async (ctx, args) => {
-    const trip = await ctx.db.get(args.tripId);
-
-    if (!trip) {
-      return null;
-    }
-
-    const offer = await ctx.db
-      .query('tripOffers')
-      .withIndex('by_trip_and_driver', (q) => q.eq('tripId', args.tripId).eq('driverId', args.driverId))
-      .first();
-    const belongsToDriver = trip.acceptedByDriverId === args.driverId || trip.assignedDriverId === args.driverId;
-
-    if (!offer && !belongsToDriver) {
-      return null;
-    }
-
+    const { profile } = await requireDriverProfile(ctx);
+    const { trip, offer, belongsToDriver } = await assertDriverCanAccessTrip(ctx, profile, args.tripId);
     const company = await ctx.db.get(trip.companyId);
 
     if (!company) {
-      return null;
+      throw new ConvexError('No tienes acceso a este viaje.');
     }
 
     const documents = await ctx.db
@@ -227,24 +216,24 @@ export const getDetail = query({
   },
 });
 
-export const acceptOffer = mutation({
+export const acceptOfferForCurrentDriver = mutation({
   args: {
     tripId: v.id('trips'),
-    driverId: v.id('drivers'),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const { profile, driverId } = await requireDriverProfile(ctx);
     const trip = await ctx.db.get(args.tripId);
 
-    if (!trip) {
-      throw new ConvexError('El viaje no existe.');
+    if (!trip || trip.companyId !== profile.companyId) {
+      throw new ConvexError('No tienes acceso a este viaje.');
     }
 
     const offer = await ctx.db
       .query('tripOffers')
-      .withIndex('by_trip_and_driver', (q) => q.eq('tripId', args.tripId).eq('driverId', args.driverId))
+      .withIndex('by_trip_and_driver', (q) => q.eq('tripId', args.tripId).eq('driverId', driverId))
       .first();
-    const alreadyAcceptedByDriver = trip.acceptedByDriverId === args.driverId || trip.assignedDriverId === args.driverId;
+    const alreadyAcceptedByDriver = trip.acceptedByDriverId === driverId || trip.assignedDriverId === driverId;
     const now = Date.now();
 
     if (alreadyAcceptedByDriver) {
@@ -258,8 +247,8 @@ export const acceptOffer = mutation({
       return null;
     }
 
-    if (!offer) {
-      throw new ConvexError('No hay una oferta para este conductor.');
+    if (!offer || offer.companyId !== profile.companyId) {
+      throw new ConvexError('No hay una oferta disponible para tu conductor.');
     }
 
     if (offer.status === 'ACCEPTED') {
@@ -280,15 +269,15 @@ export const acceptOffer = mutation({
     });
     await ctx.db.patch(args.tripId, {
       status: 'ACCEPTED',
-      acceptedByDriverId: args.driverId,
-      assignedDriverId: args.driverId,
+      acceptedByDriverId: driverId,
+      assignedDriverId: driverId,
       updatedAt: now,
     });
 
     await ctx.db.insert('tripEvents', {
       companyId: trip.companyId,
       tripId: args.tripId,
-      driverId: args.driverId,
+      driverId,
       eventType: 'TRIP_ACCEPTED',
       note: 'Viaje aceptado desde la app.',
       occurredAt: now,

@@ -1,24 +1,31 @@
+import { useMutation } from 'convex/react';
+import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { useMutation, useQuery } from 'convex/react';
-import { useRouter } from 'expo-router';
 import { api } from '@/convex/_generated/api';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { AppEmptyState } from '@/src/components/AppEmptyState';
-import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
-import { useDevSession } from '@/src/features/devSession/useDevSession';
+import { StatusBadge } from '@/src/components/StatusBadge';
+import { roleLabels } from '@/src/constants/access';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { typography } from '@/src/theme/typography';
-import { useState } from 'react';
 
-export default function SelectDriverScreen() {
-  const drivers = useQuery(api.drivers.listDemoDrivers);
+type SeedResult = {
+  accessCodes: {
+    code: string;
+    status: 'ACTIVE' | 'USED' | 'DISABLED' | 'EXPIRED';
+    role: 'DRIVER' | 'DISPATCHER' | 'ADMIN';
+    driverName?: string;
+    companyName: string;
+  }[];
+};
+
+export default function SeedScreen() {
   const seedDemoData = useMutation(api.dev.seedDemoData);
   const clearDemoData = useMutation(api.dev.clearDemoData);
-  const { selectDriver, clearDriver } = useDevSession();
-  const router = useRouter();
+  const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -26,7 +33,8 @@ export default function SelectDriverScreen() {
     setIsSeeding(true);
 
     try {
-      await seedDemoData({});
+      const result = await seedDemoData({});
+      setSeedResult(result);
     } catch {
       Alert.alert('No se pudo sembrar', 'Revisa que Convex esté corriendo y vuelve a intentar.');
     } finally {
@@ -38,8 +46,8 @@ export default function SelectDriverScreen() {
     setIsClearing(true);
 
     try {
-      clearDriver();
       await clearDemoData({});
+      setSeedResult(null);
     } catch {
       Alert.alert('No se pudo limpiar', 'Revisa que Convex esté corriendo y vuelve a intentar.');
     } finally {
@@ -48,37 +56,28 @@ export default function SelectDriverScreen() {
   };
 
   return (
-    <AppScreen
-      title="Elegir conductor"
-      subtitle="Esta selección es temporal para desarrollo. Más adelante será reemplazada por autenticación real.">
+    <AppScreen title="Datos demo" subtitle="Pantalla temporal de desarrollo para preparar pruebas con conductores.">
       <View style={styles.actions}>
         <AppButton title="Crear datos demo" onPress={handleSeed} loading={isSeeding} />
         <AppButton title="Borrar datos demo" variant="danger" onPress={handleClear} loading={isClearing} />
       </View>
 
-      {drivers === undefined ? <AppLoading message="Cargando conductores" /> : null}
-
-      {drivers && drivers.length === 0 ? (
-        <AppEmptyState
-          title="No hay conductores demo"
-          message="Crea los datos demo para elegir un conductor y probar el flujo."
-        />
+      {!seedResult ? (
+        <AppEmptyState title="Sin códigos cargados" message="Crea los datos demo para ver los códigos de acceso." />
       ) : null}
 
       <View style={styles.list}>
-        {drivers?.map((driver) => (
-          <AppCard key={driver._id}>
-            <Text style={styles.driverName}>{driver.fullName}</Text>
-            <Text style={styles.driverMeta}>{driver.company.name}</Text>
-            <Text style={styles.driverMeta}>CC {driver.documentNumber}</Text>
-            <AppButton
-              title="Usar este conductor"
-              onPress={() => {
-                selectDriver({ id: driver._id, fullName: driver.fullName });
-                router.replace('/(driver)/offers');
-              }}
-              style={styles.driverAction}
-            />
+        {seedResult?.accessCodes.map((accessCode) => (
+          <AppCard key={accessCode.code}>
+            <View style={styles.codeHeader}>
+              <View style={styles.codeText}>
+                <Text style={styles.code}>{accessCode.code}</Text>
+                <Text style={styles.meta}>{accessCode.companyName}</Text>
+                {accessCode.driverName ? <Text style={styles.meta}>{accessCode.driverName}</Text> : null}
+                <Text style={styles.meta}>{roleLabels[accessCode.role]}</Text>
+              </View>
+              <StatusBadge status={accessCode.status} />
+            </View>
           </AppCard>
         ))}
       </View>
@@ -93,16 +92,22 @@ const styles = StyleSheet.create({
   list: {
     gap: spacing.md,
   },
-  driverName: {
+  codeHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  codeText: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  code: {
     ...typography.cardTitle,
     color: colors.text,
   },
-  driverMeta: {
+  meta: {
     ...typography.body,
     color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-  driverAction: {
-    marginTop: spacing.lg,
   },
 });

@@ -1,6 +1,6 @@
 import { Alert, StyleSheet, View } from 'react-native';
 import { useMutation, useQuery } from 'convex/react';
-import { Redirect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
@@ -8,23 +8,13 @@ import { AppEmptyState } from '@/src/components/AppEmptyState';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { TripCard } from '@/src/features/trips/TripCard';
-import { useDevSession } from '@/src/features/devSession/useDevSession';
 import { spacing } from '@/src/theme/spacing';
 
 export default function OffersScreen() {
-  const { selectedDriverId } = useDevSession();
   const router = useRouter();
-  const acceptOffer = useMutation(api.trips.acceptOffer);
+  const acceptOffer = useMutation(api.trips.acceptOfferForCurrentDriver);
   const [acceptingTripId, setAcceptingTripId] = useState<Id<'trips'> | null>(null);
-
-  const offers = useQuery(
-    api.trips.listAvailableForDriver,
-    selectedDriverId ? { driverId: selectedDriverId } : 'skip',
-  );
-
-  if (!selectedDriverId) {
-    return <Redirect href="/(dev)/select-driver" />;
-  }
+  const offers = useQuery(api.trips.listAvailableForCurrentDriver, {});
 
   const openDetail = (tripId: Id<'trips'>) => {
     router.push({ pathname: '/(driver)/trip/[tripId]', params: { tripId } });
@@ -34,7 +24,7 @@ export default function OffersScreen() {
     setAcceptingTripId(tripId);
 
     try {
-      await acceptOffer({ tripId, driverId: selectedDriverId });
+      await acceptOffer({ tripId });
       router.push({ pathname: '/(driver)/trip/[tripId]', params: { tripId } });
     } catch {
       Alert.alert('No se pudo aceptar', 'La oferta ya no está disponible o hubo un problema de conexión.');

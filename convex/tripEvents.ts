@@ -2,6 +2,7 @@ import { ConvexError, v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { tripEventTypeValidator } from './schema';
 import { Doc } from './_generated/dataModel';
+import { assertDriverCanAccessTrip, requireDriverProfile } from './lib/auth';
 
 const tripEventReturn = v.object({
   _id: v.id('tripEvents'),
@@ -43,32 +44,26 @@ type TripStatus =
   | 'CLOSED'
   | 'CANCELLED';
 
-export const create = mutation({
+export const createForCurrentDriver = mutation({
   args: {
     tripId: v.id('trips'),
-    driverId: v.id('drivers'),
     eventType: tripEventTypeValidator,
     note: v.optional(v.string()),
   },
   returns: v.id('tripEvents'),
   handler: async (ctx, args) => {
-    const trip = await ctx.db.get(args.tripId);
-
-    if (!trip) {
-      throw new ConvexError('El viaje no existe.');
-    }
-
-    const belongsToDriver = trip.acceptedByDriverId === args.driverId || trip.assignedDriverId === args.driverId;
+    const { profile } = await requireDriverProfile(ctx);
+    const { trip, belongsToDriver, driverId } = await assertDriverCanAccessTrip(ctx, profile, args.tripId);
 
     if (!belongsToDriver) {
-      throw new ConvexError('Este conductor no puede registrar eventos en el viaje.');
+      throw new ConvexError('Debes aceptar el viaje antes de registrar eventos.');
     }
 
     const now = Date.now();
     const eventId = await ctx.db.insert('tripEvents', {
       companyId: trip.companyId,
       tripId: args.tripId,
-      driverId: args.driverId,
+      driverId,
       eventType: args.eventType,
       note: args.note,
       occurredAt: now,
@@ -87,12 +82,15 @@ export const create = mutation({
   },
 });
 
-export const listByTrip = query({
+export const listByTripForCurrentDriver = query({
   args: {
     tripId: v.id('trips'),
   },
   returns: v.array(tripEventReturn),
   handler: async (ctx, args) => {
+    const { profile } = await requireDriverProfile(ctx);
+    await assertDriverCanAccessTrip(ctx, profile, args.tripId);
+
     const events = await ctx.db
       .query('tripEvents')
       .withIndex('by_trip_and_occurred_at', (q) => q.eq('tripId', args.tripId))

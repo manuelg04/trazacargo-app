@@ -1,6 +1,6 @@
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useMutation, useQuery } from 'convex/react';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
@@ -11,7 +11,6 @@ import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { operationalEventActions, TripEventType } from '@/src/constants/tripEvents';
-import { useDevSession } from '@/src/features/devSession/useDevSession';
 import { TripDocumentList } from '@/src/features/trips/TripDocumentList';
 import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { TripHeader } from '@/src/features/trips/TripHeader';
@@ -23,22 +22,16 @@ import { formatDate } from '@/src/utils/formatDate';
 
 export default function TripDetailScreen() {
   const { tripId } = useLocalSearchParams<{ tripId?: string }>();
-  const { selectedDriverId } = useDevSession();
-  const router = useRouter();
-  const acceptOffer = useMutation(api.trips.acceptOffer);
-  const createEvent = useMutation(api.tripEvents.create);
+  const acceptOffer = useMutation(api.trips.acceptOfferForCurrentDriver);
+  const createEvent = useMutation(api.tripEvents.createForCurrentDriver);
   const [accepting, setAccepting] = useState(false);
   const [activeEvent, setActiveEvent] = useState<TripEventType | null>(null);
   const [issueNote, setIssueNote] = useState('Novedad reportada por el conductor.');
   const resolvedTripId = tripId as Id<'trips'> | undefined;
   const detail = useQuery(
-    api.trips.getDetail,
-    selectedDriverId && resolvedTripId ? { tripId: resolvedTripId, driverId: selectedDriverId } : 'skip',
+    api.trips.getDetailForCurrentDriver,
+    resolvedTripId ? { tripId: resolvedTripId } : 'skip',
   );
-
-  if (!selectedDriverId) {
-    return <Redirect href="/(dev)/select-driver" />;
-  }
 
   if (!resolvedTripId) {
     return (
@@ -52,7 +45,7 @@ export default function TripDetailScreen() {
     setAccepting(true);
 
     try {
-      await acceptOffer({ tripId: resolvedTripId, driverId: selectedDriverId });
+      await acceptOffer({ tripId: resolvedTripId });
     } catch {
       Alert.alert('No se pudo aceptar', 'La oferta ya no está disponible o hubo un problema de conexión.');
     } finally {
@@ -64,7 +57,7 @@ export default function TripDetailScreen() {
     setActiveEvent(eventType);
 
     try {
-      await createEvent({ tripId: resolvedTripId, driverId: selectedDriverId, eventType, note });
+      await createEvent({ tripId: resolvedTripId, eventType, note });
     } catch {
       Alert.alert('No se pudo registrar', 'Revisa el estado del viaje y vuelve a intentar.');
     } finally {
@@ -76,19 +69,6 @@ export default function TripDetailScreen() {
     return (
       <AppScreen>
         <AppLoading message="Cargando detalle" />
-      </AppScreen>
-    );
-  }
-
-  if (detail === null) {
-    return (
-      <AppScreen>
-        <AppErrorState
-          title="Sin acceso al viaje"
-          message="Este viaje no está asignado ni ofertado al conductor seleccionado."
-          actionLabel="Volver"
-          onAction={() => router.back()}
-        />
       </AppScreen>
     );
   }
