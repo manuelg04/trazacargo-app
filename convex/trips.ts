@@ -3,14 +3,12 @@ import { MutationCtx, mutation, query } from './_generated/server';
 import { Doc, Id } from './_generated/dataModel';
 import {
   companyStatusValidator,
-  documentStatusValidator,
-  documentTypeValidator,
   driverStatusValidator,
   offerStatusValidator,
   tripEventTypeValidator,
   tripStatusValidator,
-  uploadedByTypeValidator,
 } from './schema';
+import { listTripDocumentsWithUrls, tripDocumentWithUrlReturn } from './lib/documents';
 import {
   assertDispatcherCanAccessTrip,
   assertDriverBelongsToCompany,
@@ -58,20 +56,6 @@ const availableTripReturn = v.object({
   ...tripFields,
   company: companyReturn,
   offerStatus: offerStatusValidator,
-});
-
-const tripDocumentReturn = v.object({
-  _id: v.id('tripDocuments'),
-  _creationTime: v.number(),
-  companyId: v.id('companies'),
-  tripId: v.id('trips'),
-  documentType: documentTypeValidator,
-  displayName: v.string(),
-  fileName: v.string(),
-  uploadedByType: uploadedByTypeValidator,
-  status: documentStatusValidator,
-  createdAt: v.number(),
-  updatedAt: v.number(),
 });
 
 const tripEventReturn = v.object({
@@ -206,7 +190,7 @@ export const getDetailForCurrentDriver = query({
   returns: v.object({
     trip: v.object(tripFields),
     company: companyReturn,
-    documents: v.array(tripDocumentReturn),
+    documents: v.array(tripDocumentWithUrlReturn),
     events: v.array(tripEventReturn),
     access: v.object({
       hasPendingOffer: v.boolean(),
@@ -222,11 +206,7 @@ export const getDetailForCurrentDriver = query({
       throw new ConvexError('No tienes acceso a este viaje.');
     }
 
-    const documents = await ctx.db
-      .query('tripDocuments')
-      .withIndex('by_trip_and_created_at', (q) => q.eq('tripId', args.tripId))
-      .order('asc')
-      .collect();
+    const documents = await listTripDocumentsWithUrls(ctx, args.tripId);
     const events = await ctx.db
       .query('tripEvents')
       .withIndex('by_trip_and_occurred_at', (q) => q.eq('tripId', args.tripId))
@@ -451,7 +431,7 @@ export const getDetailForDispatcher = query({
     assignedDriver: v.union(v.null(), driverReturn),
     acceptedDriver: v.union(v.null(), driverReturn),
     offers: v.array(offerWithDriverReturn),
-    documents: v.array(tripDocumentReturn),
+    documents: v.array(tripDocumentWithUrlReturn),
     events: v.array(tripEventReturn),
   }),
   handler: async (ctx, args) => {
@@ -479,11 +459,7 @@ export const getDetailForDispatcher = query({
       }
     }
 
-    const documents = await ctx.db
-      .query('tripDocuments')
-      .withIndex('by_trip_and_created_at', (q) => q.eq('tripId', args.tripId))
-      .order('asc')
-      .collect();
+    const documents = await listTripDocumentsWithUrls(ctx, args.tripId);
     const events = await ctx.db
       .query('tripEvents')
       .withIndex('by_trip_and_occurred_at', (q) => q.eq('tripId', args.tripId))

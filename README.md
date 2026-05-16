@@ -1,6 +1,6 @@
 # TrazaCargo
 
-TrazaCargo es una app Expo para empresas colombianas de transporte de carga, despachadores, administradores y conductores. La fase 3 mantiene el flujo móvil del conductor y agrega una consola básica de empresa dentro de la misma app Expo.
+TrazaCargo es una app Expo para empresas colombianas de transporte de carga, despachadores, administradores y conductores. La fase 4 mantiene el flujo móvil del conductor y la consola de empresa dentro de la misma app Expo, y agrega gestión documental real con Convex Storage.
 
 ## Stack
 
@@ -10,9 +10,10 @@ TrazaCargo es una app Expo para empresas colombianas de transporte de carga, des
 - Expo Router
 - Convex
 - Convex Auth
+- Convex Storage
 - npm
 
-## Qué Incluye La Fase 3
+## Qué Incluye La Fase 4
 
 - Consola de empresa para roles `DISPATCHER` y `ADMIN`
 - Dashboard básico de viajes, conductores y ofertas
@@ -23,15 +24,29 @@ TrazaCargo es una app Expo para empresas colombianas de transporte de carga, des
 - Listado y creación de viajes
 - Oferta de viajes a uno o varios conductores
 - Detalle de viaje desde el lado empresa
-- Visualización de documentos demo y eventos del viaje
+- Subida real de documentos del viaje con Convex Storage
+- Documentos de empresa para conductor: manifiesto, remesa, anticipo, orden de cargue y otro
+- Documentos del conductor para empresa: ticket de descargue, cuenta de cobro, foto soporte, cumplido y otro
+- Visualización y apertura de archivos reales desde el detalle del viaje
+- Documentos demo históricos sin archivo cuando vienen de seed
+- Aprobación y rechazo de documentos enviados por conductor
+- Motivo visible de rechazo para el conductor
+- Reenvío simple de documentos rechazados
+- Visualización de documentos y eventos del viaje
 - Cambio de estado cuando un conductor acepta una oferta
-- Permisos backend por empresa y rol
+- Permisos backend por empresa, rol, conductor y viaje
 - Flujo existente del conductor con Convex Auth
 
 ## Instalar
 
 ```bash
 npm install
+```
+
+Si estás actualizando una instalación anterior, instala las dependencias de esta fase:
+
+```bash
+npx expo install expo-document-picker expo-image-picker expo-file-system
 ```
 
 ## Variables Locales
@@ -69,7 +84,7 @@ npm run web
 
 ## Datos Demo
 
-Para crear empresa demo, conductores, viajes, ofertas, documentos, eventos y códigos:
+Para crear empresa demo, conductores, viajes, ofertas, documentos demo sin archivo, eventos y códigos:
 
 ```bash
 npx convex run dev:seedDemoData
@@ -90,7 +105,7 @@ Para limpiar datos demo del dominio sin borrar usuarios internos de Convex Auth:
 npx convex run dev:clearDemoData
 ```
 
-## Probar Flujo Dispatcher
+## Probar Flujo Dispatcher Y Documentos De Empresa
 
 1. Ejecuta `npx convex dev`.
 2. Ejecuta `npm run start`.
@@ -104,44 +119,71 @@ npx convex run dev:clearDemoData
 10. Abre el detalle del viaje.
 11. Selecciona uno o varios conductores.
 12. Presiona `Ofertar viaje`.
+13. En `Documentos para el conductor`, sube un manifiesto real.
+14. Sube una remesa real.
+15. Abre los archivos subidos desde el detalle del viaje.
 
-## Probar Aceptación Desde Conductor
+## Probar Aceptación Y Documentos Desde Conductor
 
 1. Cierra sesión desde la cuenta dispatcher/admin.
 2. Crea una cuenta nueva para conductor.
 3. Redime el código generado para ese conductor.
 4. Confirma que el conductor ve la oferta en `Ofertas`.
 5. Acepta el viaje.
-6. Abre el detalle del viaje y registra un evento operativo.
-7. Cierra sesión.
-8. Ingresa otra vez como dispatcher/admin.
+6. Abre el detalle del viaje.
+7. Confirma que aparecen los documentos subidos por dispatcher/admin.
+8. Abre el manifiesto o la remesa.
+9. Registra un evento operativo.
+10. En `Enviar documento`, sube un ticket de descargue.
+11. Sube una cuenta de cobro o foto soporte.
+12. Confirma que tus documentos quedan en `En revisión`.
+
+## Probar Revisión Documental
+
+1. Cierra sesión como conductor.
+2. Ingresa otra vez como dispatcher/admin.
+3. Abre el detalle del viaje.
+4. En `Documentos recibidos del conductor`, abre un archivo enviado por el conductor.
+5. Aprueba uno de los documentos.
+6. Rechaza otro documento con motivo.
+7. Cierra sesión como dispatcher/admin.
+8. Ingresa otra vez como conductor.
 9. Abre el detalle del viaje.
-10. Confirma que el estado está aceptado, que aparece el conductor y que el timeline muestra eventos.
+10. Confirma que ves un documento aprobado, uno rechazado y el motivo de rechazo.
+11. Sube nuevamente el tipo de documento rechazado.
 
 ## Seguridad Y Permisos De Esta Fase
 
 - El frontend no envía `companyId`.
+- El frontend no envía `driverId` para funciones protegidas del conductor.
 - Las funciones de empresa derivan `companyId` desde el perfil autenticado.
 - `DRIVER` no puede usar funciones de dispatcher/admin.
+- `DRIVER` no puede subir documentos de empresa a conductor.
+- `DRIVER` no puede aprobar ni rechazar documentos.
+- `DISPATCHER` y `ADMIN` no pueden subir documentos como conductor.
 - `DISPATCHER` y `ADMIN` solo operan datos de su empresa.
 - Los viajes, conductores, vehículos, documentos, eventos y códigos se validan por empresa.
+- Las URL de archivos se generan desde Convex Storage después de validar permisos.
+- La base de datos guarda `storageId` y metadata, no URL permanentes.
 - Los códigos se muestran en UI porque esta fase es MVP/dev. En producción deben endurecerse los flujos de emisión, visibilidad y expiración.
 
 ## No Incluye Esta Fase
 
-- Subida real de archivos
-- Convex Storage
 - GPS
 - Push notifications
+- OCR o IA
+- Escaneo avanzado de documentos
+- Compresión avanzada de imágenes
+- Firma digital
 - Panel web con Next.js
 - Monorepo
 - Pagos
 - Marketplace público
 - Integración RNDC
 - Tracking en vivo
-- Aprobación o rechazo documental real
-- OCR o IA
 - Facturación
+- Borrado físico avanzado de archivos
+- HTTP actions para serving avanzado
 - Seguridad final de producción
 
 ## Verificación
@@ -157,6 +199,14 @@ npm run lint
 
 Para cambios visuales o de navegación, abre la app en Expo Go, simulador o web preview y recorre el flujo afectado.
 
-## Fase 4 Sugerida
+## Limitaciones Técnicas
 
-Gestión documental real con Convex Storage: carga de documentos por conductor, metadatos por tipo documental, revisión por empresa y estados de aprobación.
+- La apertura de archivos usa la URL temporal generada por Convex para el usuario autorizado.
+- Los archivos reales no se borran físicamente de storage en esta fase.
+- Los documentos demo sembrados no tienen `storageId`, por eso aparecen como documento demo sin archivo.
+- La subida usa un archivo por acción, sin multiarchivo por lote.
+- La cámara y el selector dependen de permisos y comportamiento de Expo Go en cada plataforma.
+
+## Fase 5 Sugerida
+
+Control operativo avanzado del cierre documental: requerimientos por tipo de documento, indicadores de pendientes por viaje, vencimientos, historial de reenvíos más completo y endurecimiento de seguridad para preparación productiva.

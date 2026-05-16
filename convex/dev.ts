@@ -463,6 +463,17 @@ async function ensureDemoDocument(
   const existingDocument = documents.find((document) => document.documentType === input.documentType);
 
   if (existingDocument) {
+    const needsDirection = !existingDocument.direction;
+    const needsFileName = !existingDocument.originalFileName && existingDocument.fileName;
+
+    if (needsDirection || needsFileName) {
+      await ctx.db.patch(existingDocument._id, {
+        direction: needsDirection ? 'COMPANY_TO_DRIVER' : existingDocument.direction,
+        originalFileName: needsFileName ? existingDocument.fileName : existingDocument.originalFileName,
+        updatedAt: input.createdAt,
+      });
+    }
+
     return false;
   }
 
@@ -470,8 +481,10 @@ async function ensureDemoDocument(
     companyId,
     tripId,
     documentType: input.documentType,
+    direction: 'COMPANY_TO_DRIVER',
     displayName: input.displayName,
     fileName: input.fileName,
+    originalFileName: input.fileName,
     uploadedByType: 'COMPANY',
     status: 'AVAILABLE',
     createdAt: input.createdAt,

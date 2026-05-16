@@ -38,6 +38,7 @@ export const documentStatusValidator = v.union(
   v.literal('SUBMITTED'),
   v.literal('APPROVED'),
   v.literal('REJECTED'),
+  v.literal('ARCHIVED'),
 );
 
 export const documentTypeValidator = v.union(
@@ -48,10 +49,21 @@ export const documentTypeValidator = v.union(
   v.literal('DELIVERY_TICKET'),
   v.literal('PAYMENT_ACCOUNT'),
   v.literal('SUPPORT_PHOTO'),
+  v.literal('FULFILLMENT'),
   v.literal('OTHER'),
 );
 
-export const uploadedByTypeValidator = v.union(v.literal('COMPANY'), v.literal('DRIVER'));
+export const documentDirectionValidator = v.union(
+  v.literal('COMPANY_TO_DRIVER'),
+  v.literal('DRIVER_TO_COMPANY'),
+);
+
+export const uploadedByTypeValidator = v.union(
+  v.literal('COMPANY'),
+  v.literal('DRIVER'),
+  v.literal('DISPATCHER'),
+  v.literal('ADMIN'),
+);
 
 export const tripEventTypeValidator = v.union(
   v.literal('TRIP_ACCEPTED'),
@@ -149,16 +161,27 @@ export default defineSchema({
     companyId: v.id('companies'),
     tripId: v.id('trips'),
     documentType: documentTypeValidator,
+    direction: v.optional(documentDirectionValidator),
     displayName: v.string(),
-    fileName: v.string(),
+    fileName: v.optional(v.string()),
+    originalFileName: v.optional(v.string()),
+    storageId: v.optional(v.id('_storage')),
+    mimeType: v.optional(v.string()),
+    sizeBytes: v.optional(v.number()),
+    uploadedByUserId: v.optional(v.id('users')),
     uploadedByType: uploadedByTypeValidator,
     status: documentStatusValidator,
+    rejectionReason: v.optional(v.string()),
+    reviewedByUserId: v.optional(v.id('users')),
+    reviewedAt: v.optional(v.number()),
+    parentDocumentId: v.optional(v.id('tripDocuments')),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index('by_company', ['companyId'])
     .index('by_trip', ['tripId'])
-    .index('by_trip_and_created_at', ['tripId', 'createdAt']),
+    .index('by_trip_and_created_at', ['tripId', 'createdAt'])
+    .index('by_trip_and_direction', ['tripId', 'direction']),
   tripEvents: defineTable({
     companyId: v.id('companies'),
     tripId: v.id('trips'),

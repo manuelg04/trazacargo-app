@@ -25,9 +25,10 @@ export const offerStatusLabels = {
 export const documentStatusLabels = {
   PENDING: 'Pendiente',
   AVAILABLE: 'Disponible',
-  SUBMITTED: 'Enviado',
+  SUBMITTED: 'En revisión',
   APPROVED: 'Aprobado',
   REJECTED: 'Rechazado',
+  ARCHIVED: 'Archivado',
 } as const;
 
 export const documentTypeLabels = {
@@ -35,9 +36,10 @@ export const documentTypeLabels = {
   REMITTANCE: 'Remesa',
   ADVANCE: 'Anticipo',
   LOADING_ORDER: 'Orden de cargue',
-  DELIVERY_TICKET: 'Cumplido',
+  DELIVERY_TICKET: 'Ticket de descargue',
   PAYMENT_ACCOUNT: 'Cuenta de cobro',
   SUPPORT_PHOTO: 'Foto soporte',
+  FULFILLMENT: 'Cumplido',
   OTHER: 'Otro',
 } as const;
 
