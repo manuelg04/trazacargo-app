@@ -1,33 +1,40 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { Redirect, Tabs, useRouter } from 'expo-router';
-import { useDevSession } from '@/src/features/devSession/useDevSession';
+import { StyleSheet } from 'react-native';
+import { Redirect, Tabs } from 'expo-router';
+import { AppLoading } from '@/src/components/AppLoading';
+import { AppScreen } from '@/src/components/AppScreen';
+import { useCurrentProfile } from '@/src/features/auth/useCurrentProfile';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { typography } from '@/src/theme/typography';
 
 export default function DriverLayout() {
-  const { selectedDriverId, selectedDriverName, clearDriver } = useDevSession();
-  const router = useRouter();
+  const { currentProfile, isAuthenticated, isLoading, isProfileLoading } = useCurrentProfile();
 
-  if (!selectedDriverId) {
-    return <Redirect href="/(dev)/select-driver" />;
+  if (isLoading || isProfileLoading) {
+    return (
+      <AppScreen>
+        <AppLoading message="Cargando conductor" />
+      </AppScreen>
+    );
   }
 
-  const changeDriver = () => {
-    clearDriver();
-    router.replace('/(dev)/select-driver');
-  };
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
+
+  if (!currentProfile?.profile || currentProfile.profile.status !== 'ACTIVE') {
+    return <Redirect href="/(onboarding)/access-code" />;
+  }
+
+  if (currentProfile.profile.role !== 'DRIVER') {
+    return <Redirect href="/" />;
+  }
 
   return (
     <Tabs
       screenOptions={{
         headerStyle: styles.header,
         headerTitleStyle: styles.headerTitle,
-        headerRight: () => (
-          <Pressable onPress={changeDriver} style={styles.changeButton}>
-            <Text style={styles.changeButtonText}>{selectedDriverName ?? 'Cambiar'}</Text>
-          </Pressable>
-        ),
         tabBarActiveTintColor: colors.primary,
         tabBarIcon: () => null,
         tabBarIconStyle: styles.tabIcon,
@@ -38,6 +45,7 @@ export default function DriverLayout() {
       }}>
       <Tabs.Screen name="offers" options={{ title: 'Ofertas', tabBarLabel: 'Ofertas' }} />
       <Tabs.Screen name="trips" options={{ title: 'Mis viajes', tabBarLabel: 'Mis viajes' }} />
+      <Tabs.Screen name="account" options={{ title: 'Cuenta', tabBarLabel: 'Cuenta' }} />
       <Tabs.Screen name="trip/[tripId]" options={{ href: null, title: 'Detalle del viaje' }} />
     </Tabs>
   );
@@ -50,15 +58,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.cardTitle,
     color: colors.text,
-  },
-  changeButton: {
-    marginRight: spacing.lg,
-    maxWidth: 150,
-  },
-  changeButtonText: {
-    ...typography.small,
-    color: colors.primary,
-    fontWeight: '700',
   },
   tabBar: {
     backgroundColor: colors.surface,

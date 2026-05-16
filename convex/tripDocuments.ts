@@ -1,6 +1,7 @@
 import { query } from './_generated/server';
 import { v } from 'convex/values';
 import { documentStatusValidator, documentTypeValidator, uploadedByTypeValidator } from './schema';
+import { assertDriverCanAccessTrip, requireDriverProfile } from './lib/auth';
 
 const tripDocumentReturn = v.object({
   _id: v.id('tripDocuments'),
@@ -16,12 +17,15 @@ const tripDocumentReturn = v.object({
   updatedAt: v.number(),
 });
 
-export const listByTrip = query({
+export const listByTripForCurrentDriver = query({
   args: {
     tripId: v.id('trips'),
   },
   returns: v.array(tripDocumentReturn),
   handler: async (ctx, args) => {
+    const { profile } = await requireDriverProfile(ctx);
+    await assertDriverCanAccessTrip(ctx, profile, args.tripId);
+
     return await ctx.db
       .query('tripDocuments')
       .withIndex('by_trip_and_created_at', (q) => q.eq('tripId', args.tripId))
