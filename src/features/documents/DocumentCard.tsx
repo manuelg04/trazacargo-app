@@ -3,18 +3,16 @@ import { ReactNode } from 'react';
 import { Id } from '@/convex/_generated/dataModel';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
+import { StatusBadge } from '@/src/components/StatusBadge';
 import {
   DocumentDirection,
   documentDirectionLabels,
   DocumentStatus,
-  documentStatusLabels,
   DocumentType,
   getDocumentTypeLabel,
   UploadedByType,
 } from '@/src/features/documents/documentLabels';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, docTypeLabels, fontFamily, fontSize, radius, spacing } from '@/constants/theme';
 import { formatDate } from '@/src/utils/formatDate';
 import { formatFileSize } from '@/src/utils/formatFileSize';
 import { getMimeTypeLabel } from '@/src/utils/getMimeTypeLabel';
@@ -47,11 +45,10 @@ export function DocumentCard({ document, showDirection = true, children }: Docum
   const fileSize = formatFileSize(document.sizeBytes);
   const mimeTypeLabel = getMimeTypeLabel(document.mimeType);
   const fileDetail = [fileName, mimeTypeLabel, fileSize].filter(Boolean).join(' · ');
+  const isRejected = document.status === 'REJECTED';
 
   const handleOpen = async () => {
-    if (!document.url) {
-      return;
-    }
+    if (!document.url) return;
 
     try {
       await Linking.openURL(document.url);
@@ -60,105 +57,130 @@ export function DocumentCard({ document, showDirection = true, children }: Docum
     }
   };
 
+  const typeLabel = docTypeLabels[document.documentType] ?? getDocumentTypeLabel(document.documentType);
+
   return (
-    <AppCard style={styles.card}>
+    <AppCard style={isRejected ? styles.cardRejected : undefined}>
       <View style={styles.header}>
-        <View style={styles.titleBlock}>
-          <Text style={styles.title}>{document.displayName}</Text>
-          <Text style={styles.meta}>{getDocumentTypeLabel(document.documentType)}</Text>
-          {showDirection ? <Text style={styles.meta}>{documentDirectionLabels[document.direction]}</Text> : null}
+        <View style={styles.iconBox}>
+          <Text style={styles.iconText}>📄</Text>
         </View>
-        <DocumentStatusPill status={document.status} />
+        <View style={styles.titleBlock}>
+          <Text style={styles.name}>{document.displayName}</Text>
+          <Text style={styles.type}>{typeLabel}</Text>
+          {showDirection ? (
+            <Text style={styles.direction}>{documentDirectionLabels[document.direction]}</Text>
+          ) : null}
+        </View>
+        <StatusBadge status={document.status} />
       </View>
 
       <View style={styles.body}>
         <Text style={document.url ? styles.fileDetail : styles.demoFile}>
           {document.url ? fileDetail || 'Archivo disponible' : 'Documento demo sin archivo'}
         </Text>
-        <Text style={styles.meta}>Fecha: {formatDate(document.createdAt)}</Text>
-        {document.rejectionReason ? <Text style={styles.rejection}>Motivo: {document.rejectionReason}</Text> : null}
+        <Text style={styles.date}>Fecha: {formatDate(document.createdAt)}</Text>
       </View>
 
-      {document.url ? <AppButton title="Abrir" variant="secondary" onPress={handleOpen} style={styles.openButton} /> : null}
-      {children ? <View style={styles.actions}>{children}</View> : null}
+      {document.rejectionReason ? (
+        <View style={styles.rejectPanel}>
+          <Text style={styles.rejectTitle}>✕ DOCUMENTO RECHAZADO</Text>
+          <Text style={styles.rejectReason}>&quot;{document.rejectionReason}&quot;</Text>
+        </View>
+      ) : null}
+
+      {document.url ? (
+        <AppButton label="Abrir" variant="ghost" onPress={handleOpen} fullWidth />
+      ) : null}
+      {children ? <View style={styles.childActions}>{children}</View> : null}
     </AppCard>
   );
 }
 
-function DocumentStatusPill({ status }: { status: DocumentStatus }) {
-  const tone = documentStatusToneByValue[status] ?? { backgroundColor: colors.neutralSoft, color: colors.textMuted };
-
-  return (
-    <View style={[styles.badge, { backgroundColor: tone.backgroundColor }]}>
-      <Text style={[styles.badgeText, { color: tone.color }]}>{documentStatusLabels[status]}</Text>
-    </View>
-  );
-}
-
-const documentStatusToneByValue: Record<DocumentStatus, { backgroundColor: string; color: string }> = {
-  PENDING: { backgroundColor: colors.warningSoft, color: colors.warning },
-  AVAILABLE: { backgroundColor: colors.successSoft, color: colors.success },
-  SUBMITTED: { backgroundColor: colors.infoSoft, color: colors.info },
-  APPROVED: { backgroundColor: colors.successSoft, color: colors.success },
-  REJECTED: { backgroundColor: colors.dangerSoft, color: colors.danger },
-  ARCHIVED: { backgroundColor: colors.neutralSoft, color: colors.textMuted },
-};
-
 const styles = StyleSheet.create({
-  card: {
-    gap: spacing.md,
-    padding: spacing.md,
+  cardRejected: {
+    borderColor: colors.errorBd,
+    backgroundColor: colors.errorBg,
   },
   header: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: spacing.md,
-    justifyContent: 'space-between',
+    gap: spacing[3],
+    marginBottom: spacing[3],
+  },
+  iconBox: {
+    alignItems: 'center',
+    backgroundColor: colors.brand50,
+    borderRadius: radius.md,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  iconText: {
+    fontSize: 18,
   },
   titleBlock: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 2,
   },
-  title: {
-    ...typography.cardTitle,
-    color: colors.text,
+  name: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.base,
   },
-  meta: {
-    ...typography.small,
-    color: colors.textMuted,
+  type: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
-  badge: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  badgeText: {
-    ...typography.small,
-    fontWeight: '700',
+  direction: {
+    color: colors.textTertiary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
   },
   body: {
-    gap: spacing.xs,
+    gap: 4,
+    marginBottom: spacing[3],
   },
   fileDetail: {
-    ...typography.body,
-    color: colors.text,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
   demoFile: {
-    ...typography.body,
-    color: colors.warning,
+    color: colors.textTertiary,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
   },
-  rejection: {
-    ...typography.body,
-    backgroundColor: colors.dangerSoft,
-    borderRadius: 8,
-    color: colors.danger,
-    padding: spacing.md,
+  date: {
+    color: colors.textTertiary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
   },
-  openButton: {
-    alignSelf: 'stretch',
+  rejectPanel: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    marginBottom: spacing[3],
+    padding: spacing[3],
   },
-  actions: {
-    gap: spacing.sm,
+  rejectTitle: {
+    color: colors.error,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xs,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  rejectReason: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    lineHeight: fontSize.sm * 1.6,
+    marginTop: 4,
+  },
+  childActions: {
+    gap: spacing[2],
+    marginTop: spacing[2],
   },
 });

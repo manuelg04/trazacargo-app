@@ -1,8 +1,6 @@
 import { StyleSheet, Text } from 'react-native';
 import { AppCard } from '@/src/components/AppCard';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize } from '@/constants/theme';
 
 type DispatcherStatCardProps = {
   label: string;
@@ -21,16 +19,19 @@ export function DispatcherStatCard({ label, value }: DispatcherStatCardProps) {
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    gap: spacing.xs,
-    minWidth: 136,
+    gap: 4,
+    minWidth: 140,
   },
   value: {
-    ...typography.title,
-    color: colors.primary,
+    color: colors.brand500,
+    fontFamily: fontFamily.extrabold,
+    fontSize: fontSize['3xl'],
   },
   label: {
-    ...typography.small,
-    color: colors.textMuted,
-    fontWeight: '700',
+    color: colors.textSecondary,
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.xs,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

@@ -1,19 +1,15 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
+import { colors, fontFamily, fontSize, roleLabels, spacing } from '@/constants/theme';
 import { AppButton } from '@/src/components/AppButton';
-import { AppCard } from '@/src/components/AppCard';
 import { AppEmptyState } from '@/src/components/AppEmptyState';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
-import { roleLabels } from '@/src/constants/access';
 import { AccessCodeCard } from '@/src/features/dispatcher/AccessCodeCard';
 import { useCurrentProfile } from '@/src/features/auth/useCurrentProfile';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
 
 export default function AccessCodesScreen() {
   const { currentProfile } = useCurrentProfile();
@@ -55,44 +51,65 @@ export default function AccessCodesScreen() {
   };
 
   return (
-    <AppScreen title="Accesos" subtitle="Códigos de activación de la empresa.">
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {generatedCode ? (
-        <AppCard style={styles.generatedCard}>
-          <Text style={styles.generatedLabel}>Código generado</Text>
-          <Text style={styles.generatedCode}>{generatedCode}</Text>
-        </AppCard>
-      ) : null}
-      {isAdmin ? (
-        <View style={styles.actions}>
-          <AppButton
-            title={`Crear código ${roleLabels.DISPATCHER}`}
-            onPress={() => handleCreateAdministrativeCode('DISPATCHER')}
-            loading={creatingRole === 'DISPATCHER'}
-          />
-          <AppButton
-            title={`Crear código ${roleLabels.ADMIN}`}
-            variant="secondary"
-            onPress={() => handleCreateAdministrativeCode('ADMIN')}
-            loading={creatingRole === 'ADMIN'}
-          />
-        </View>
-      ) : null}
-      {accessCodes === undefined ? <AppLoading message="Cargando accesos" /> : null}
-      {accessCodes && accessCodes.length === 0 ? (
-        <AppEmptyState title="Sin códigos" message="Los códigos generados aparecerán aquí." />
-      ) : null}
-      <View style={styles.list}>
-        {accessCodes?.map((accessCode) => (
-          <AccessCodeCard
-            key={accessCode._id}
-            accessCode={accessCode}
-            onDisable={handleDisableAccessCode}
-            disabling={disablingCodeId === accessCode._id}
-          />
-        ))}
+    <View style={styles.root}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Accesos</Text>
       </View>
-    </AppScreen>
+      <AppScreen>
+        <View style={styles.warningBox}>
+          <Text style={styles.warningText}>⚠ Los códigos son visibles en modo MVP/dev. No compartir en producción.</Text>
+        </View>
+        {generatedCode ? (
+          <View style={styles.generatedCard}>
+            <Text style={styles.generatedLabel}>Código generado</Text>
+            <Text style={styles.generatedCode}>{generatedCode}</Text>
+            <Text style={styles.generatedHint}>Comparte este código con el usuario. Es de un solo uso.</Text>
+          </View>
+        ) : null}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+        {isAdmin ? (
+          <View style={styles.adminActions}>
+            <AppButton
+              label={`Crear código ${roleLabels.DISPATCHER}`}
+              variant="primary"
+              fullWidth
+              onPress={() => handleCreateAdministrativeCode('DISPATCHER')}
+              loading={creatingRole === 'DISPATCHER'}
+            />
+            <AppButton
+              label={`Crear código ${roleLabels.ADMIN}`}
+              variant="secondary"
+              fullWidth
+              onPress={() => handleCreateAdministrativeCode('ADMIN')}
+              loading={creatingRole === 'ADMIN'}
+            />
+          </View>
+        ) : null}
+        {accessCodes === undefined ? <AppLoading message="Cargando accesos" /> : null}
+        {accessCodes && accessCodes.length === 0 ? (
+          <AppEmptyState title="Sin códigos" message="Los códigos generados aparecerán aquí." />
+        ) : null}
+        {accessCodes && accessCodes.length > 0 ? (
+          <FlatList
+            data={accessCodes}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => (
+              <AccessCodeCard
+                accessCode={item}
+                onDisable={handleDisableAccessCode}
+                disabling={disablingCodeId === item._id}
+              />
+            )}
+            scrollEnabled={false}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        ) : null}
+      </AppScreen>
+    </View>
   );
 }
 
@@ -107,30 +124,78 @@ function getAccessCodeErrorMessage(error: unknown) {
 }
 
 const styles = StyleSheet.create({
-  actions: {
-    gap: spacing.md,
+  root: {
+    flex: 1,
+    backgroundColor: colors.bgCanvas,
   },
-  list: {
-    gap: spacing.md,
+  header: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[3],
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
   },
-  error: {
-    ...typography.body,
-    backgroundColor: colors.dangerSoft,
-    borderRadius: 8,
-    color: colors.danger,
-    padding: spacing.md,
+  headerTitle: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: fontSize.xl,
+    color: colors.textPrimary,
+  },
+  warningBox: {
+    backgroundColor: colors.warningBg,
+    borderColor: colors.warningBd,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: spacing[3],
+  },
+  warningText: {
+    color: colors.warning,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
   },
   generatedCard: {
-    backgroundColor: colors.successSoft,
+    backgroundColor: colors.successBg,
+    borderColor: colors.successBd,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: spacing[4],
   },
   generatedLabel: {
-    ...typography.small,
     color: colors.success,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xs,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   generatedCode: {
-    ...typography.sectionTitle,
-    color: colors.text,
-    marginTop: spacing.xs,
+    color: colors.brand500,
+    fontFamily: fontFamily.bold,
+    fontSize: 22,
+    letterSpacing: 4,
+    marginTop: 6,
+  },
+  generatedHint: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    marginTop: 6,
+  },
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: spacing[4],
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+  },
+  adminActions: {
+    gap: spacing[3],
+  },
+  separator: {
+    height: spacing[3],
   },
 });

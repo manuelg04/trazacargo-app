@@ -3,9 +3,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { StatusBadge } from '@/src/components/StatusBadge';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { colors, fontFamily, fontSize, size, spacing } from '@/constants/theme';
 
 type DriverCardDriver = {
   _id: Id<'drivers'>;
@@ -26,25 +24,38 @@ type DriverCardProps = {
 };
 
 export function DriverCard({ driver, onGenerateAccessCode, generating = false }: DriverCardProps) {
+  const initials = driver.fullName
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+
   return (
     <AppCard>
       <View style={styles.header}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
         <View style={styles.textBlock}>
-          <Text style={styles.title}>{driver.fullName}</Text>
-          <Text style={styles.meta}>Teléfono: {driver.phone}</Text>
-          <Text style={styles.meta}>Documento: {driver.documentNumber}</Text>
-          <Text style={styles.meta}>
-            Vehículo: {driver.vehicle ? `${driver.vehicle.plate} · ${driver.vehicle.vehicleType}` : 'Sin vehículo'}
-          </Text>
+          <Text style={styles.name}>{driver.fullName}</Text>
+          <Text style={styles.meta}>📱 {driver.phone}</Text>
+          <Text style={styles.meta}>🪪 {driver.documentNumber}</Text>
+          {driver.vehicle ? (
+            <Text style={styles.meta}>🚛 {driver.vehicle.plate} · {driver.vehicle.vehicleType}</Text>
+          ) : (
+            <Text style={styles.meta}>Sin vehículo registrado</Text>
+          )}
         </View>
         <StatusBadge status={driver.status} />
       </View>
       {onGenerateAccessCode ? (
         <AppButton
-          title="Generar código de acceso"
+          label="Generar código de acceso"
           variant="secondary"
           onPress={() => onGenerateAccessCode(driver._id)}
           loading={generating}
+          fullWidth
           style={styles.action}
         />
       ) : null}
@@ -56,22 +67,36 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: spacing.md,
-    justifyContent: 'space-between',
+    gap: spacing[3],
+  },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: colors.brand50,
+    borderRadius: size.avatar / 2,
+    height: size.avatar,
+    justifyContent: 'center',
+    width: size.avatar,
+  },
+  avatarText: {
+    color: colors.brand600,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.base,
   },
   textBlock: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 3,
   },
-  title: {
-    ...typography.cardTitle,
-    color: colors.text,
+  name: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.base,
   },
   meta: {
-    ...typography.body,
-    color: colors.textMuted,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
   action: {
-    marginTop: spacing.lg,
+    marginTop: spacing[4],
   },
 });

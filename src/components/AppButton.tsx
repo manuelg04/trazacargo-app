@@ -1,85 +1,86 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
+import { colors, fontFamily, fontSize, radius, size } from '@/constants/theme';
 
-type AppButtonVariant = 'primary' | 'secondary' | 'danger';
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent' | 'success' | 'link';
+type ButtonSize = 'lg' | 'md' | 'sm';
+
+const variantMap: Record<Variant, { bg: string; text: string; border: string }> = {
+  primary:   { bg: colors.brand500,  text: colors.textInverse,   border: colors.brand500 },
+  secondary: { bg: colors.brand50,   text: colors.brand600,      border: colors.brand200 },
+  danger:    { bg: colors.errorBg,   text: colors.error,         border: colors.errorBd },
+  ghost:     { bg: 'transparent',    text: colors.textSecondary, border: colors.border },
+  accent:    { bg: colors.accent500, text: colors.textInverse,   border: colors.accent500 },
+  success:   { bg: colors.success,   text: colors.textInverse,   border: colors.success },
+  link:      { bg: 'transparent',    text: colors.brand600,      border: 'transparent' },
+};
 
 type AppButtonProps = {
-  title: string;
+  label?: string;
+  title?: string;
   onPress: () => void;
-  variant?: AppButtonVariant;
+  variant?: Variant;
+  size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
+  fullWidth?: boolean;
   style?: ViewStyle;
 };
 
 export function AppButton({
+  label,
   title,
   onPress,
   variant = 'primary',
+  size: buttonSize = 'md',
   disabled = false,
   loading = false,
+  fullWidth = false,
   style,
 }: AppButtonProps) {
+  const text = label ?? title ?? '';
+  const tone = variantMap[variant];
+  const height = buttonSize === 'lg' ? size.btnLg : buttonSize === 'sm' ? size.btnSm : size.btnMd;
+  const textSize = buttonSize === 'sm' ? fontSize.sm : fontSize.base;
   const isDisabled = disabled || loading;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      disabled={isDisabled}
+    <TouchableOpacity
       onPress={onPress}
-      style={({ pressed }) => [
+      disabled={isDisabled}
+      activeOpacity={0.75}
+      style={[
         styles.base,
-        styles[variant],
-        pressed && !isDisabled ? styles.pressed : null,
-        isDisabled ? styles.disabled : null,
+        {
+          backgroundColor: tone.bg,
+          borderColor: tone.border,
+          height,
+          opacity: isDisabled ? 0.5 : 1,
+          width: fullWidth ? '100%' : undefined,
+        },
         style,
       ]}>
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.surface : colors.primary} />
+        <ActivityIndicator color={tone.text} size="small" />
       ) : (
-        <Text style={[styles.text, variant === 'secondary' ? styles.textSecondary : null, variant === 'danger' ? styles.textDanger : null]}>
-          {title}
+        <Text style={[styles.label, { color: tone.text, fontSize: textSize }]} numberOfLines={1}>
+          {text}
         </Text>
       )}
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: radius.btn,
+    borderWidth: 1,
+    flexDirection: 'row',
     justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: 16,
   },
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.secondary,
-  },
-  danger: {
-    backgroundColor: colors.dangerSoft,
-  },
-  pressed: {
-    opacity: 0.86,
-  },
-  disabled: {
-    opacity: 0.56,
-  },
-  text: {
-    ...typography.button,
-    color: colors.surface,
-    textAlign: 'center',
-  },
-  textSecondary: {
-    color: colors.primary,
-  },
-  textDanger: {
-    color: colors.danger,
+  label: {
+    fontFamily: fontFamily.bold,
+    letterSpacing: 0.1,
   },
 });

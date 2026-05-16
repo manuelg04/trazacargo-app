@@ -1,13 +1,13 @@
 import { useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { api } from '@/convex/_generated/api';
+import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppButton } from '@/src/components/AppButton';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { DispatcherStatCard } from '@/src/features/dispatcher/DispatcherStatCard';
 import { useCurrentProfile } from '@/src/features/auth/useCurrentProfile';
-import { spacing } from '@/src/theme/spacing';
 
 export default function DispatcherDashboardScreen() {
   const router = useRouter();
@@ -16,35 +16,85 @@ export default function DispatcherDashboardScreen() {
   const companyName = currentProfile?.company?.name ?? 'Empresa';
 
   return (
-    <AppScreen title={companyName} subtitle="Consola operativa para viajes, conductores y accesos.">
-      {stats === undefined ? <AppLoading message="Cargando dashboard" /> : null}
-      {stats ? (
-        <View style={styles.statsGrid}>
-          <DispatcherStatCard label="Viajes totales" value={stats.totalTrips} />
-          <DispatcherStatCard label="Ofertados" value={stats.offeredTrips} />
-          <DispatcherStatCard label="Aceptados" value={stats.acceptedTrips} />
-          <DispatcherStatCard label="En ruta" value={stats.inTransitTrips} />
-          <DispatcherStatCard label="Cerrados" value={stats.closedTrips} />
-          <DispatcherStatCard label="Conductores activos" value={stats.activeDrivers} />
-          <DispatcherStatCard label="Ofertas pendientes" value={stats.pendingOffers} />
-        </View>
-      ) : null}
-      <View style={styles.actions}>
-        <AppButton title="Crear viaje" onPress={() => router.push('/(dispatcher)/create-trip')} />
-        <AppButton title="Ver viajes" variant="secondary" onPress={() => router.push('/(dispatcher)/trips')} />
-        <AppButton title="Ver conductores" variant="secondary" onPress={() => router.push('/(dispatcher)/drivers')} />
+    <View style={styles.root}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{companyName}</Text>
+        <Text style={styles.headerSubtitle}>Consola operativa</Text>
       </View>
-    </AppScreen>
+      <AppScreen>
+        {stats === undefined ? <AppLoading message="Cargando dashboard" /> : null}
+        {stats ? (
+          <View style={styles.statsGrid}>
+            <DispatcherStatCard label="Viajes totales" value={stats.totalTrips} />
+            <DispatcherStatCard label="Ofertados" value={stats.offeredTrips} />
+            <DispatcherStatCard label="Aceptados" value={stats.acceptedTrips} />
+            <DispatcherStatCard label="En ruta" value={stats.inTransitTrips} />
+            <DispatcherStatCard label="Cerrados" value={stats.closedTrips} />
+            <DispatcherStatCard label="Conductores activos" value={stats.activeDrivers} />
+            <DispatcherStatCard label="Ofertas pendientes" value={stats.pendingOffers} />
+          </View>
+        ) : null}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Acciones rápidas</Text>
+        </View>
+        <AppButton
+          label="+ Crear viaje"
+          variant="primary"
+          fullWidth
+          onPress={() => router.push('/(dispatcher)/create-trip')}
+        />
+        <AppButton
+          label="Ver viajes"
+          variant="secondary"
+          fullWidth
+          onPress={() => router.push('/(dispatcher)/trips')}
+        />
+        <AppButton
+          label="Ver conductores"
+          variant="secondary"
+          fullWidth
+          onPress={() => router.push('/(dispatcher)/drivers')}
+        />
+      </AppScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.bgCanvas,
+  },
+  header: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[3],
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  headerTitle: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: fontSize.xl,
+    color: colors.textPrimary,
+  },
+  headerSubtitle: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: 12,
   },
-  actions: {
-    gap: spacing.md,
+  sectionHeader: {
+    marginTop: spacing[2],
+  },
+  sectionTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.lg,
+    color: colors.textPrimary,
   },
 });

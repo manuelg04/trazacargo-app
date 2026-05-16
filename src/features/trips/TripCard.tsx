@@ -3,11 +3,9 @@ import { Id } from '@/convex/_generated/dataModel';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { formatCurrency } from '@/src/utils/formatCurrency';
 import { formatDate } from '@/src/utils/formatDate';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
 
 type TripCardTrip = {
   _id: Id<'trips'>;
@@ -32,27 +30,26 @@ export function TripCard({ trip, onView, onAccept, accepting = false }: TripCard
     <AppCard>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.route}>{trip.originCity} → {trip.destinationCity}</Text>
+          <Text style={styles.route}>
+            {trip.originCity}
+            <Text style={styles.arrow}> → </Text>
+            {trip.destinationCity}
+          </Text>
           <Text style={styles.cargo}>{trip.cargoDescription}</Text>
         </View>
         <StatusBadge status={trip.status} />
       </View>
 
-      <View style={styles.details}>
-        <Text style={styles.detail}>Cargue: {formatDate(trip.pickupAt)}</Text>
-        <Text style={styles.detail}>Flete: {formatCurrency(trip.freightValue)}</Text>
-        <Text style={styles.detail}>Anticipo: {formatCurrency(trip.advanceValue)}</Text>
+      <View style={styles.meta}>
+        <Text style={styles.metaItem}>📅 {formatDate(trip.pickupAt)}</Text>
+        {trip.freightValue ? <Text style={styles.metaItem}>💵 {formatCurrency(trip.freightValue)}</Text> : null}
+        {trip.advanceValue ? <Text style={styles.metaItem}>Anticipo: {formatCurrency(trip.advanceValue)}</Text> : null}
       </View>
 
       <View style={styles.actions}>
-        <AppButton title="Ver detalle" variant="secondary" onPress={() => onView(trip._id)} style={styles.actionButton} />
+        <AppButton label="Ver detalle" variant="secondary" onPress={() => onView(trip._id)} fullWidth />
         {onAccept ? (
-          <AppButton
-            title="Aceptar viaje"
-            onPress={() => onAccept(trip._id)}
-            loading={accepting}
-            style={styles.actionButton}
-          />
+          <AppButton label="Aceptar viaje" onPress={() => onAccept(trip._id)} loading={accepting} fullWidth />
         ) : null}
       </View>
     </AppCard>
@@ -63,34 +60,38 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing[3],
     justifyContent: 'space-between',
   },
   headerText: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 4,
   },
   route: {
-    ...typography.cardTitle,
-    color: colors.text,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.md,
+  },
+  arrow: {
+    color: colors.textTertiary,
+    fontFamily: fontFamily.regular,
   },
   cargo: {
-    ...typography.body,
-    color: colors.textMuted,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
-  details: {
-    gap: spacing.xs,
-    marginTop: spacing.lg,
+  meta: {
+    gap: 4,
+    marginTop: spacing[3],
   },
-  detail: {
-    ...typography.body,
-    color: colors.text,
+  metaItem: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
   actions: {
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  actionButton: {
-    width: '100%',
+    gap: spacing[2],
+    marginTop: spacing[4],
   },
 });

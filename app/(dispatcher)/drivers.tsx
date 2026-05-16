@@ -1,8 +1,9 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
+import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { AppEmptyState } from '@/src/components/AppEmptyState';
@@ -10,9 +11,6 @@ import { AppInput } from '@/src/components/AppInput';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { DriverCard } from '@/src/features/dispatcher/DriverCard';
-import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
-import { typography } from '@/src/theme/typography';
 
 export default function DispatcherDriversScreen() {
   const drivers = useQuery(api.drivers.listForCurrentCompany, {});
@@ -72,39 +70,55 @@ export default function DispatcherDriversScreen() {
   };
 
   return (
-    <AppScreen title="Conductores" subtitle="Conductores activos de tu empresa y accesos para activar sus cuentas.">
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {generatedCode ? (
-        <AppCard style={styles.generatedCard}>
-          <Text style={styles.generatedLabel}>Código generado</Text>
-          <Text style={styles.generatedCode}>{generatedCode}</Text>
-        </AppCard>
-      ) : null}
-      <AppCard>
-        <View style={styles.form}>
-          <AppInput label="Nombre completo" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
-          <AppInput label="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-          <AppInput label="Documento" value={documentNumber} onChangeText={setDocumentNumber} keyboardType="number-pad" />
-          <AppInput label="Placa" value={vehiclePlate} onChangeText={setVehiclePlate} autoCapitalize="characters" />
-          <AppInput label="Tipo de vehículo" value={vehicleType} onChangeText={setVehicleType} autoCapitalize="words" />
-          <AppButton title="Crear conductor" onPress={handleCreateDriver} loading={creating} />
-        </View>
-      </AppCard>
-      {drivers === undefined ? <AppLoading message="Cargando conductores" /> : null}
-      {drivers && drivers.length === 0 ? (
-        <AppEmptyState title="Sin conductores" message="Crea el primer conductor para poder ofertar viajes." />
-      ) : null}
-      <View style={styles.list}>
-        {drivers?.map((driver) => (
-          <DriverCard
-            key={driver._id}
-            driver={driver}
-            onGenerateAccessCode={handleGenerateAccessCode}
-            generating={generatingDriverId === driver._id}
-          />
-        ))}
+    <View style={styles.root}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Conductores</Text>
       </View>
-    </AppScreen>
+      <AppScreen>
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+        {generatedCode ? (
+          <AppCard style={styles.generatedCard}>
+            <Text style={styles.generatedLabel}>Código generado</Text>
+            <Text style={styles.generatedCode}>{generatedCode}</Text>
+            <Text style={styles.generatedHint}>Comparte este código con el conductor. Es de un solo uso.</Text>
+          </AppCard>
+        ) : null}
+        <AppCard>
+          <Text style={styles.formTitle}>Nuevo conductor</Text>
+          <View style={styles.form}>
+            <AppInput label="Nombre completo" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
+            <AppInput label="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <AppInput label="Documento" value={documentNumber} onChangeText={setDocumentNumber} keyboardType="number-pad" />
+            <AppInput label="Placa" value={vehiclePlate} onChangeText={setVehiclePlate} autoCapitalize="characters" />
+            <AppInput label="Tipo de vehículo" value={vehicleType} onChangeText={setVehicleType} autoCapitalize="words" />
+            <AppButton label="Crear conductor" variant="primary" size="lg" fullWidth onPress={handleCreateDriver} loading={creating} />
+          </View>
+        </AppCard>
+        {drivers === undefined ? <AppLoading message="Cargando conductores" /> : null}
+        {drivers && drivers.length === 0 ? (
+          <AppEmptyState icon="👥" title="Sin conductores" message="Aún no hay conductores registrados." />
+        ) : null}
+        {drivers && drivers.length > 0 ? (
+          <FlatList
+            data={drivers}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => (
+              <DriverCard
+                driver={item}
+                onGenerateAccessCode={handleGenerateAccessCode}
+                generating={generatingDriverId === item._id}
+              />
+            )}
+            scrollEnabled={false}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        ) : null}
+      </AppScreen>
+    </View>
   );
 }
 
@@ -119,30 +133,69 @@ function getDriverErrorMessage(error: unknown) {
 }
 
 const styles = StyleSheet.create({
-  form: {
-    gap: spacing.md,
+  root: {
+    flex: 1,
+    backgroundColor: colors.bgCanvas,
   },
-  list: {
-    gap: spacing.md,
+  header: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[3],
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
   },
-  error: {
-    ...typography.body,
-    backgroundColor: colors.dangerSoft,
-    borderRadius: 8,
-    color: colors.danger,
-    padding: spacing.md,
+  headerTitle: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: fontSize.xl,
+    color: colors.textPrimary,
+  },
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBd,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: spacing[4],
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
   },
   generatedCard: {
-    backgroundColor: colors.successSoft,
+    backgroundColor: colors.successBg,
+    borderColor: colors.successBd,
   },
   generatedLabel: {
-    ...typography.small,
     color: colors.success,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xs,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   generatedCode: {
-    ...typography.sectionTitle,
-    color: colors.text,
-    marginTop: spacing.xs,
+    color: colors.brand500,
+    fontFamily: fontFamily.bold,
+    fontSize: 22,
+    letterSpacing: 4,
+    marginTop: 6,
+  },
+  generatedHint: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    marginTop: 6,
+  },
+  formTitle: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.base,
+    marginBottom: spacing[3],
+  },
+  form: {
+    gap: spacing[3],
+  },
+  separator: {
+    height: spacing[3],
   },
 });
