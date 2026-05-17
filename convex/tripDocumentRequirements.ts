@@ -21,6 +21,10 @@ import {
   requireDriverProfile,
 } from './lib/permissions';
 import { createTripDocumentReviewEvent } from './tripDocumentReviewEvents';
+import {
+  defaultCompanyDocumentRequirementTemplates,
+  listActiveTemplatesForCompany,
+} from './companyDocumentRequirementTemplates';
 
 type RequirementCtx = QueryCtx | MutationCtx;
 type RequirementDirection = Doc<'tripDocumentRequirements'>['direction'];
@@ -330,14 +334,35 @@ export async function createDefaultRequirementsForTrip(
   createdByUserId: Id<'users'> | undefined,
   now = Date.now(),
 ) {
+  const trip = await ctx.db.get(tripId);
+
+  if (!trip) {
+    throw new ConvexError('El viaje no existe.');
+  }
+
+  const activeTemplates = await listActiveTemplatesForCompany(ctx, companyId);
+  const requirements = activeTemplates.length > 0 ? activeTemplates : defaultCompanyDocumentRequirementTemplates;
+  const dueBaseAt = trip.pickupAt ?? now;
   let createdCount = 0;
 
-  for (const requirement of defaultTripDocumentRequirements) {
-    const existing = await findActiveRequirement(ctx, companyId, tripId, requirement.direction, requirement.documentType);
+  for (const requirement of requirements) {
+    const existing = await findExistingRequirementForTemplate(
+      ctx,
+      companyId,
+      tripId,
+      requirement.direction,
+      requirement.documentType,
+      requirement.displayName,
+    );
 
     if (existing) {
       continue;
     }
+
+    const dueAt =
+      'defaultDueOffsetHours' in requirement && requirement.defaultDueOffsetHours !== undefined
+        ? dueBaseAt + requirement.defaultDueOffsetHours * 60 * 60 * 1000
+        : undefined;
 
     await ctx.db.insert('tripDocumentRequirements', {
       companyId,
@@ -347,6 +372,7 @@ export async function createDefaultRequirementsForTrip(
       displayName: requirement.displayName,
       required: requirement.required,
       status: 'PENDING',
+      dueAt,
       createdByUserId,
       createdAt: now,
       updatedAt: now,
@@ -512,6 +538,28 @@ async function findActiveRequirement(
   );
 }
 
+async function findExistingRequirementForTemplate(
+  ctx: RequirementCtx,
+  companyId: Id<'companies'>,
+  tripId: Id<'trips'>,
+  direction: RequirementDirection,
+  documentType: RequirementDocumentType,
+  displayName: string,
+) {
+  const requirements = await ctx.db
+    .query('tripDocumentRequirements')
+    .withIndex('by_trip_and_direction', (q) => q.eq('tripId', tripId).eq('direction', direction))
+    .collect();
+  const normalizedName = displayName.trim().toLocaleLowerCase();
+
+  return requirements.find(
+    (requirement) =>
+      requirement.companyId === companyId &&
+      requirement.documentType === documentType &&
+      requirement.displayName.trim().toLocaleLowerCase() === normalizedName,
+  );
+}
+
 function assertDocumentTypeForDirection(direction: RequirementDirection, documentType: RequirementDocumentType) {
   if (direction === 'COMPANY_TO_DRIVER') {
     assertCompanyDocumentType(documentType);
@@ -588,47 +636,3 @@ async function findLatestDocumentForRequirement(ctx: MutationCtx, requirementId:
 
   return documents.sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
 }
-
-const defaultTripDocumentRequirements = [
-  {
-    direction: 'COMPANY_TO_DRIVER',
-    documentType: 'MANIFEST',
-    displayName: 'Manifiesto',
-    required: true,
-  },
-  {
-    direction: 'COMPANY_TO_DRIVER',
-    documentType: 'REMITTANCE',
-    displayName: 'Remesa',
-    required: true,
-  },
-  {
-    direction: 'COMPANY_TO_DRIVER',
-    documentType: 'ADVANCE',
-    displayName: 'Anticipo',
-    required: false,
-  },
-  {
-    direction: 'DRIVER_TO_COMPANY',
-    documentType: 'DELIVERY_TICKET',
-    displayName: 'Ticket de descargue',
-    required: true,
-  },
-  {
-    direction: 'DRIVER_TO_COMPANY',
-    documentType: 'PAYMENT_ACCOUNT',
-    displayName: 'Cuenta de cobro',
-    required: true,
-  },
-  {
-    direction: 'DRIVER_TO_COMPANY',
-    documentType: 'FULFILLMENT',
-    displayName: 'Cumplido',
-    required: false,
-  },
-] satisfies {
-  direction: RequirementDirection;
-  documentType: RequirementDocumentType;
-  displayName: string;
-  required: boolean;
-}[];

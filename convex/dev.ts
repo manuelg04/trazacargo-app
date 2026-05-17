@@ -6,6 +6,7 @@ import {
   createDefaultRequirementsForTrip,
   updateRequirementAfterDocumentCreated,
 } from './tripDocumentRequirements';
+import { ensureDefaultTemplatesForCompany } from './companyDocumentRequirementTemplates';
 
 const demoCompanyName = 'Transportes Demo Bucaramanga';
 
@@ -55,6 +56,7 @@ export const seedDemoData = mutation({
 
     const vehicleCreated = await ensureDemoVehicle(ctx, companyId, firstDriverResult.driverId, now);
     created = created || vehicleCreated;
+    created = (await ensureDefaultTemplatesForCompany(ctx, companyId, undefined, now)) > 0 || created;
 
     const offeredTripResult = await getOrCreateDemoTrip(ctx, {
       companyId,
@@ -219,6 +221,10 @@ export const clearDemoData = mutation({
         .query('tripDocumentRequirements')
         .withIndex('by_company', (q) => q.eq('companyId', company._id))
         .collect();
+      const templates = await ctx.db
+        .query('companyDocumentRequirementTemplates')
+        .withIndex('by_company', (q) => q.eq('companyId', company._id))
+        .collect();
       const reviewEvents = await ctx.db
         .query('tripDocumentReviewEvents')
         .withIndex('by_company', (q) => q.eq('companyId', company._id))
@@ -260,6 +266,10 @@ export const clearDemoData = mutation({
 
       for (const requirement of requirements) {
         await ctx.db.delete(requirement._id);
+      }
+
+      for (const template of templates) {
+        await ctx.db.delete(template._id);
       }
 
       for (const reviewEvent of reviewEvents) {

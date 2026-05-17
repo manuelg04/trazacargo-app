@@ -59,6 +59,12 @@ export default function DispatcherDashboardScreen() {
           fullWidth
           onPress={() => router.push('/(dispatcher)/drivers')}
         />
+        <AppButton
+          label="Configuración"
+          variant="secondary"
+          fullWidth
+          onPress={() => router.push('/(dispatcher)/settings')}
+        />
       </AppScreen>
     </View>
   );

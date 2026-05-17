@@ -1,6 +1,10 @@
 # TrazaCargo
 
-TrazaCargo es una app Expo para empresas colombianas de transporte de carga, despachadores, administradores y conductores. La fase 6 estabiliza el flujo documental existente: checklist, requisitos, aprobación, rechazo, reenvío, cierre de viaje, filtros operativos, fechas límite e historial documental.
+TrazaCargo es una app Expo para empresas colombianas de transporte de carga, despachadores, administradores y conductores.
+
+Promesa del producto:
+
+> Del viaje asignado al viaje cerrado, sin perder documentos en WhatsApp.
 
 ## Stack
 
@@ -13,21 +17,19 @@ TrazaCargo es una app Expo para empresas colombianas de transporte de carga, des
 - Convex Storage
 - npm
 
-## Qué Incluye La Fase 6
+## Qué incluye la fase 7
 
-- Filtros documentales en viajes de dispatcher/admin: todos, pendientes, en revisión, rechazados, listos para cerrar y completos
-- Filtros documentales en viajes del conductor: todos, pendientes, en revisión, rechazados y completos
-- Fechas límite simples por requisito documental con `dueAt`
-- Indicadores de requisitos vencidos y próximos a vencer
-- Edición y limpieza de fecha límite desde el checklist del dispatcher/admin
-- Historial documental por viaje
-- Registro de envíos, aprobaciones, rechazos, reenvíos, archivo, exenciones, reactivaciones y cambios de fecha límite
-- Resumen documental más claro cuando no hay requisitos
-- Badge `Listo para cerrar` cuando la documentación obligatoria está completa y el viaje sigue abierto
-- Confirmación antes de cerrar un viaje
-- Mensaje claro cuando el cierre falla por documentos pendientes, en revisión o rechazados
-- Pruebas automatizadas mínimas para permisos, requisitos, cierre, filtros, fechas límite e historial
-- Limpieza demo extendida para `tripDocumentReviewEvents`
+- Plantillas documentales por empresa
+- Copia automática de plantillas activas al checklist de cada viaje nuevo
+- Fallback a requisitos documentales base cuando una empresa no tiene plantillas activas
+- Pantalla `Configuración` para ver la empresa y gestionar plantillas
+- Creación, edición y desactivación de plantillas documentales
+- Conductores editables desde la consola
+- Desactivación y reactivación simple de conductores
+- Bloqueo para no ofertar viajes nuevos a conductores desactivados
+- Preparación básica para builds internas con EAS
+- Checklist de piloto en `docs/pilot-checklist.md`
+- Pruebas automatizadas para plantillas, aislamiento entre empresas y ofertas a conductores
 
 ## Instalar
 
@@ -35,7 +37,7 @@ TrazaCargo es una app Expo para empresas colombianas de transporte de carga, des
 npm install
 ```
 
-## Variables Locales
+## Variables locales
 
 Crea `.env.local` desde `.env.example` y usa los valores locales de Convex:
 
@@ -46,7 +48,7 @@ CONVEX_DEPLOYMENT=dev:scintillating-bulldog-845
 
 Las llaves JWT de Convex Auth viven en el entorno del despliegue de Convex. No se agregan a `.env.example`.
 
-## Correr El Proyecto
+## Correr el proyecto
 
 En una terminal:
 
@@ -68,7 +70,7 @@ npm run android
 npm run web
 ```
 
-## Datos Demo
+## Datos demo
 
 Para limpiar datos demo del dominio sin borrar internals delicados de Convex Auth:
 
@@ -76,7 +78,7 @@ Para limpiar datos demo del dominio sin borrar internals delicados de Convex Aut
 npx convex run dev:clearDemoData
 ```
 
-Para crear empresa demo, conductores, viajes, ofertas, requisitos documentales, documentos demo sin archivo, eventos y códigos:
+Para crear empresa demo, conductores, viajes, ofertas, plantillas documentales, requisitos, documentos demo sin archivo, eventos y códigos:
 
 ```bash
 npx convex run dev:seedDemoData
@@ -91,51 +93,59 @@ Códigos demo actuales:
 
 La pantalla temporal `/(dev)/seed` también permite crear o limpiar datos demo desde la app.
 
-## Usar Filtros Documentales
+## Configurar plantillas documentales
 
 1. Entra como dispatcher/admin.
-2. Abre `Viajes`.
-3. Usa `Estado del viaje` para filtrar por estado operativo.
-4. Usa `Estado documental` para ver pendientes, en revisión, rechazados, listos para cerrar o completos.
-5. Entra como conductor.
-6. Abre `Mis viajes`.
-7. Usa `Estado documental` para filtrar tus viajes por avance documental.
+2. Abre `Configuración`.
+3. Revisa la información básica de la empresa.
+4. Presiona `Crear plantillas base` si la empresa no tiene plantillas activas.
+5. Presiona `Crear plantilla` para agregar una plantilla personalizada.
+6. Define flujo, tipo de documento, nombre visible, si es obligatorio y horas límite por defecto.
+7. Usa `Editar` para cambiar nombre visible, obligatoriedad u horas límite.
+8. Usa `Desactivar` para sacar una plantilla de viajes futuros sin borrarla.
 
-## Usar Fechas Límite
+Las plantillas activas se copian automáticamente al checklist de cada viaje nuevo. Las plantillas desactivadas no se copian.
 
-1. Entra como dispatcher/admin.
-2. Abre el detalle de un viaje.
-3. En `Documentos`, crea un requisito adicional con fecha límite o edita la fecha desde un requisito existente.
-4. Confirma que el dispatcher/admin ve la fecha en el checklist.
-5. Entra como conductor y abre el mismo viaje.
-6. Confirma que el conductor ve la fecha límite.
-7. Si la fecha ya pasó y el requisito no está cumplido ni eximido, se muestra `Vencido`.
-8. Si vence dentro de 48 horas y el requisito no está cumplido ni eximido, se muestra `Vence pronto`.
-
-## Revisar Historial Documental
-
-1. Entra como conductor.
-2. Sube un documento requerido.
-3. Entra como dispatcher/admin.
-4. Rechaza el documento con motivo.
-5. Vuelve como conductor y reenvía el documento corregido.
-6. Vuelve como dispatcher/admin y apruébalo.
-7. En el detalle del viaje, abre `Documentos`.
-8. Revisa `Historial documental` para ver envío, rechazo, reenvío y aprobación.
-
-## Probar Cierre De Viaje
+## Crear viajes usando plantillas
 
 1. Entra como dispatcher/admin.
-2. Abre un viaje con documentos obligatorios pendientes.
-3. Presiona `Cerrar viaje`.
-4. Confirma que aparece el bloqueo por documentos pendientes, en revisión o rechazados.
-5. Aprueba o exime los requisitos obligatorios.
-6. Confirma que el badge muestra `Listo para cerrar`.
-7. Presiona `Cerrar viaje`.
-8. Confirma el cierre.
-9. Verifica que aparece `Viaje cerrado correctamente.` y que el estado queda `Cerrado`.
+2. Asegura que la empresa tenga plantillas activas en `Configuración`.
+3. Crea un viaje desde `Dashboard` o `Viajes`.
+4. Abre el detalle del viaje.
+5. Entra a `Documentos`.
+6. Confirma que el checklist fue creado desde las plantillas activas.
 
-## Pruebas Automatizadas
+Si una empresa no tiene plantillas activas, TrazaCargo usa los requisitos base:
+
+- Manifiesto
+- Remesa
+- Anticipo
+- Ticket de descargue
+- Cuenta de cobro
+- Cumplido
+
+## Administrar conductores
+
+1. Entra como dispatcher/admin.
+2. Abre `Conductores`.
+3. Crea un conductor o edita nombre, teléfono y documento.
+4. Usa `Desactivar conductor` para impedir nuevas ofertas.
+5. Usa `Reactivar conductor` para volver a dejarlo disponible.
+6. Los viajes históricos del conductor siguen visibles.
+7. Los conductores desactivados no aparecen como opción principal para ofertar viajes nuevos.
+
+## Flujo documental principal
+
+1. Crea un viaje.
+2. Oferta el viaje a un conductor activo.
+3. Entra como conductor y acepta la oferta.
+4. Entra como dispatcher/admin y sube documentos requeridos de empresa.
+5. Entra como conductor y sube documentos requeridos de cierre.
+6. Entra como dispatcher/admin y aprueba o rechaza los documentos.
+7. Si un documento fue rechazado, reenvíalo desde el conductor.
+8. Cierra el viaje cuando los documentos obligatorios estén cumplidos o eximidos.
+
+## Pruebas automatizadas
 
 Para correr las pruebas una vez:
 
@@ -152,18 +162,21 @@ npm run test
 Las pruebas cubren:
 
 - Requisitos por defecto al crear viajes
+- Plantillas documentales copiadas a viajes nuevos
+- Fallback base cuando no hay plantillas activas
+- Plantillas desactivadas no copiadas
+- Aislamiento de plantillas entre empresas
 - Bloqueo de cierre con documentos obligatorios pendientes
 - Cierre permitido con requisitos cumplidos o eximidos
-- Conductor sin permiso para cerrar viajes
-- Conductor sin permiso para crear documentos de empresa
-- Dispatcher/admin sin permiso para crear documentos del conductor
+- Permisos de conductor y dispatcher/admin
 - Cambios de estado de requisitos al subir, aprobar y rechazar documentos
-- Aislamiento entre empresas
 - Filtros documentales de dispatcher/admin y conductor
 - Actualización de fecha límite
 - Historial documental
+- Bloqueo de ofertas a conductores desactivados
+- Ofertas permitidas a conductores activos
 
-## Verificación Antes De Reportar
+## Verificación antes de reportar
 
 ```bash
 npm install
@@ -175,7 +188,29 @@ npm run test:once
 
 Para cambios visuales o de navegación, abre la app en Expo Go, simulador o web preview y recorre el flujo afectado.
 
-## Seguridad Y Permisos
+## Preparación para builds internas
+
+Expo Go sigue funcionando para desarrollo y validación rápida.
+
+EAS Build queda preparado para generar un APK Android o builds internas cuando se quiera probar con usuarios reales. No se ejecutó ningún build como parte de esta fase.
+
+Perfiles disponibles:
+
+- `development`: build interno con development client
+- `preview`: build interno, Android en APK
+- `production`: perfil base para configurar más adelante
+
+Comandos preparados:
+
+```bash
+npm run build:android:preview
+npm run build:ios:preview
+npm run build:all:preview
+```
+
+Para ejecutar builds necesitas una cuenta Expo/EAS. iOS puede requerir Apple Developer según el tipo de distribución.
+
+## Seguridad y permisos
 
 - El frontend no envía `companyId`.
 - El frontend no envía `driverId` para funciones protegidas del conductor.
@@ -186,12 +221,11 @@ Para cambios visuales o de navegación, abre la app en Expo Go, simulador o web 
 - `DRIVER` no puede crear, eximir, reactivar ni editar requisitos.
 - `DRIVER` no puede aprobar ni rechazar documentos.
 - `DISPATCHER` y `ADMIN` no pueden subir documentos como conductor.
-- `DISPATCHER` y `ADMIN` no pueden asociar documentos a requisitos de otra empresa o de otro viaje.
 - `DISPATCHER` y `ADMIN` solo operan datos de su empresa.
 - Cada `requirementId` se valida en backend contra empresa, viaje, dirección y tipo de documento.
 - Las URL de archivos se generan desde Convex Storage después de validar permisos.
 
-## No Incluye Esta Fase
+## No incluye esta fase
 
 - GPS
 - Tracking en vivo
@@ -208,20 +242,25 @@ Para cambios visuales o de navegación, abre la app en Expo Go, simulador o web 
 - Comentarios
 - Analítica avanzada
 - Soporte offline
-- Producción hardening
+- Producción hardening final
+- App store submission
+- CI/CD complejo
 - Migraciones o backfill de viajes antiguos
 
-## Limitaciones Técnicas
+## Limitaciones técnicas
 
-- No se implementan migraciones ni backfill porque el proyecto sigue en desarrollo y no hay datos reales que preservar.
+- No se implementan migraciones ni backfill para viajes antiguos.
 - Si hay datos demo viejos o incompatibles, usa `dev:clearDemoData` y luego `dev:seedDemoData`.
+- Las plantillas solo afectan viajes nuevos.
+- Las plantillas se desactivan, no se borran físicamente.
 - La apertura de archivos usa la URL temporal generada por Convex para el usuario autorizado.
 - Los archivos reales no se borran físicamente de storage en esta fase.
 - Los documentos demo sembrados no tienen `storageId`, por eso aparecen como documento demo sin archivo.
 - La subida usa un archivo por acción, sin multiarchivo por lote.
 - La cámara y el selector dependen de permisos y comportamiento de Expo Go en cada plataforma.
 - La validación de tipo de archivo usa metadata de la plataforma, no inspección binaria.
+- EAS queda configurado, pero los builds internos requieren login y configuración de cuenta.
 
-## Fase 7 Sugerida
+## Fase 8 sugerida
 
-Preparar operación real sin saltar a integraciones grandes: estados documentales más configurables por empresa, plantillas de requisitos por tipo de viaje, auditoría más completa para soporte, mejores datos de prueba por rol y endurecimiento gradual para despliegue piloto.
+Preparar el piloto operativo con endurecimiento controlado: roles de soporte, auditoría de acciones críticas, guías de onboarding para la empresa piloto, manejo más claro de archivos pesados, revisión de errores reales del piloto y mejoras pequeñas basadas en uso observado.

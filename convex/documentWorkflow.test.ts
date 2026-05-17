@@ -18,6 +18,28 @@ type ReviewEventType =
   | 'REQUIREMENT_REACTIVATED'
   | 'REQUIREMENT_DUE_DATE_UPDATED';
 type TestApp = ReturnType<typeof createTestApp>;
+type TemplateDirection = 'COMPANY_TO_DRIVER' | 'DRIVER_TO_COMPANY';
+type TemplateDocumentType =
+  | 'MANIFEST'
+  | 'REMITTANCE'
+  | 'ADVANCE'
+  | 'LOADING_ORDER'
+  | 'DELIVERY_TICKET'
+  | 'PAYMENT_ACCOUNT'
+  | 'SUPPORT_PHOTO'
+  | 'FULFILLMENT'
+  | 'OTHER';
+type TemplateView = {
+  _id: string;
+  companyId: Id<'companies'>;
+  direction: TemplateDirection;
+  documentType: TemplateDocumentType;
+  displayName: string;
+  required: boolean;
+  defaultDueOffsetHours?: number;
+  status: 'ACTIVE' | 'DISABLED';
+  sortOrder?: number;
+};
 
 const updateRequirementDueDateByDispatcher = (
   api.tripDocumentRequirements as unknown as Record<
@@ -55,6 +77,90 @@ const listReviewEventsByTripForCurrentDriver = (
   >
 ).listReviewEventsByTripForCurrentDriver;
 
+const listTemplatesForCurrentCompany = (
+  api as unknown as Record<
+    string,
+    Record<
+      string,
+      FunctionReference<
+        'query',
+        'public',
+        Record<string, never>,
+        TemplateView[]
+      >
+    >
+  >
+).companyDocumentRequirementTemplates.listForCurrentCompany;
+
+const createTemplateForCurrentCompany = (
+  api as unknown as Record<
+    string,
+    Record<
+      string,
+      FunctionReference<
+        'mutation',
+        'public',
+        {
+          direction: TemplateDirection;
+          documentType: TemplateDocumentType;
+          displayName: string;
+          required: boolean;
+          defaultDueOffsetHours?: number;
+          sortOrder?: number;
+        },
+        TemplateView
+      >
+    >
+  >
+).companyDocumentRequirementTemplates.createForCurrentCompany;
+
+const disableTemplateForCurrentCompany = (
+  api as unknown as Record<
+    string,
+    Record<
+      string,
+      FunctionReference<
+        'mutation',
+        'public',
+        { templateId: string },
+        TemplateView
+      >
+    >
+  >
+).companyDocumentRequirementTemplates.disableForCurrentCompany;
+
+const updateDriverForCurrentCompany = (
+  api.drivers as unknown as Record<
+    string,
+    FunctionReference<
+      'mutation',
+      'public',
+      {
+        driverId: Id<'drivers'>;
+        fullName?: string;
+        phone?: string;
+        documentNumber?: string;
+      },
+      unknown
+    >
+  >
+).updateDriverForCurrentCompany;
+
+const updateDriverStatusForCurrentCompany = (
+  api.drivers as unknown as Record<
+    string,
+    FunctionReference<
+      'mutation',
+      'public',
+      {
+        driverId: Id<'drivers'>;
+        status: 'ACTIVE' | 'DISABLED';
+      },
+      unknown
+    >
+  >
+).updateStatusForCurrentCompany;
+
 function createTestApp() {
   return convexTest(schema, modules);
 }
@@ -67,6 +173,143 @@ function asUser(t: TestApp, userId: Id<'users'>, label: string) {
 }
 
 describe('document workflow rules', () => {
+  test('creates requirements from company templates when a dispatcher creates a trip', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const dispatcher = asUser(t, seed.dispatcherUserId, 'dispatcher');
+
+    await dispatcher.mutation(createTemplateForCurrentCompany, {
+      direction: 'COMPANY_TO_DRIVER',
+      documentType: 'LOADING_ORDER',
+      displayName: 'Orden de cargue piloto',
+      required: true,
+      defaultDueOffsetHours: 4,
+      sortOrder: 1,
+    });
+    await dispatcher.mutation(createTemplateForCurrentCompany, {
+      direction: 'DRIVER_TO_COMPANY',
+      documentType: 'SUPPORT_PHOTO',
+      displayName: 'Foto de descargue',
+      required: false,
+      sortOrder: 2,
+    });
+
+    const trip = await createDispatcherTrip(dispatcher);
+    const requirements = await listRequirements(t, trip._id);
+
+    expect(requirements.map((requirement) => requirement.displayName)).toEqual([
+      'Orden de cargue piloto',
+      'Foto de descargue',
+    ]);
+    expect(requirements.map((requirement) => requirement.documentType)).toEqual(['LOADING_ORDER', 'SUPPORT_PHOTO']);
+    expect(requirements[0].dueAt).toBe(Date.parse('2026-05-18') + 4 * 60 * 60 * 1000);
+  });
+
+  test('keeps default fallback when a company has no templates', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const dispatcher = asUser(t, seed.dispatcherUserId, 'dispatcher');
+
+    const trip = await createDispatcherTrip(dispatcher);
+    const requirements = await listRequirements(t, trip._id);
+
+    expect(requirements).toHaveLength(6);
+    expect(requirements.map((requirement) => requirement.documentType)).toEqual([
+      'MANIFEST',
+      'REMITTANCE',
+      'ADVANCE',
+      'DELIVERY_TICKET',
+      'PAYMENT_ACCOUNT',
+      'FULFILLMENT',
+    ]);
+  });
+
+  test('does not copy disabled templates to a new trip', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const dispatcher = asUser(t, seed.dispatcherUserId, 'dispatcher');
+
+    const activeTemplate = await dispatcher.mutation(createTemplateForCurrentCompany, {
+      direction: 'COMPANY_TO_DRIVER',
+      documentType: 'MANIFEST',
+      displayName: 'Manifiesto activo',
+      required: true,
+    });
+    const disabledTemplate = await dispatcher.mutation(createTemplateForCurrentCompany, {
+      direction: 'DRIVER_TO_COMPANY',
+      documentType: 'FULFILLMENT',
+      displayName: 'Cumplido desactivado',
+      required: true,
+    });
+    await dispatcher.mutation(disableTemplateForCurrentCompany, { templateId: disabledTemplate._id });
+
+    const trip = await createDispatcherTrip(dispatcher);
+    const requirements = await listRequirements(t, trip._id);
+
+    expect(requirements.map((requirement) => requirement.displayName)).toEqual([activeTemplate.displayName]);
+  });
+
+  test('keeps company templates isolated between companies', async () => {
+    const t = createTestApp();
+    const first = await seedCompany(t, 'A');
+    const second = await seedCompany(t, 'B');
+    const firstDispatcher = asUser(t, first.dispatcherUserId, 'dispatcher-a');
+    const secondDispatcher = asUser(t, second.dispatcherUserId, 'dispatcher-b');
+
+    const secondTemplate = await secondDispatcher.mutation(createTemplateForCurrentCompany, {
+      direction: 'COMPANY_TO_DRIVER',
+      documentType: 'MANIFEST',
+      displayName: 'Plantilla privada',
+      required: true,
+    });
+
+    await expect(
+      firstDispatcher.mutation(disableTemplateForCurrentCompany, { templateId: secondTemplate._id }),
+    ).rejects.toThrow(ConvexError);
+    expect(await firstDispatcher.query(listTemplatesForCurrentCompany, {})).toEqual([]);
+    expect((await secondDispatcher.query(listTemplatesForCurrentCompany, {})).map((template) => template.displayName)).toEqual([
+      'Plantilla privada',
+    ]);
+  });
+
+  test('prevents disabled drivers from receiving new offers', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const dispatcher = asUser(t, seed.dispatcherUserId, 'dispatcher');
+    const trip = await createDispatcherTrip(dispatcher);
+
+    await dispatcher.mutation(updateDriverStatusForCurrentCompany, {
+      driverId: seed.driverId,
+      status: 'DISABLED',
+    });
+
+    await expect(
+      dispatcher.mutation(api.trips.offerToDriversForDispatcher, {
+        tripId: trip._id,
+        driverIds: [seed.driverId],
+      }),
+    ).rejects.toThrow(ConvexError);
+  });
+
+  test('allows active drivers to receive new offers', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const dispatcher = asUser(t, seed.dispatcherUserId, 'dispatcher');
+    const trip = await createDispatcherTrip(dispatcher);
+
+    await dispatcher.mutation(updateDriverForCurrentCompany, {
+      driverId: seed.driverId,
+      fullName: 'Conductor Activo',
+    });
+    const result = await dispatcher.mutation(api.trips.offerToDriversForDispatcher, {
+      tripId: trip._id,
+      driverIds: [seed.driverId],
+    });
+
+    expect(result.createdCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+  });
+
   test('creates default requirements when a dispatcher creates a trip', async () => {
     const t = createTestApp();
     const seed = await seedCompany(t);
@@ -393,6 +636,16 @@ async function seedCompany(t: TestApp, suffix = 'main') {
     }
 
     return { companyId, driverId, dispatcherUserId, driverUserId, tripId };
+  });
+}
+
+async function createDispatcherTrip(dispatcher: ReturnType<TestApp['withIdentity']>) {
+  return await dispatcher.mutation(api.trips.createForDispatcher, {
+    originCity: 'Bucaramanga',
+    destinationCity: 'Santa Marta',
+    pickupAt: '2026-05-18',
+    deliveryEta: '2026-05-20',
+    cargoDescription: 'Carga seca',
   });
 }
 
