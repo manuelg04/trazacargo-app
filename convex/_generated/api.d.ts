@@ -17,6 +17,8 @@ import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_documents from "../lib/documents.js";
 import type * as lib_permissions from "../lib/permissions.js";
+import type * as tripDocumentRequirements from "../tripDocumentRequirements.js";
+import type * as tripDocumentReviewEvents from "../tripDocumentReviewEvents.js";
 import type * as tripDocuments from "../tripDocuments.js";
 import type * as tripEvents from "../tripEvents.js";
 import type * as trips from "../trips.js";
@@ -39,6 +41,8 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/documents": typeof lib_documents;
   "lib/permissions": typeof lib_permissions;
+  tripDocumentRequirements: typeof tripDocumentRequirements;
+  tripDocumentReviewEvents: typeof tripDocumentReviewEvents;
   tripDocuments: typeof tripDocuments;
   tripEvents: typeof tripEvents;
   trips: typeof trips;

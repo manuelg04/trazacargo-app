@@ -14,12 +14,18 @@ import { AppScreen } from '@/src/components/AppScreen';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { CompanyDocumentUploadPanel } from '@/src/features/documents/CompanyDocumentUploadPanel';
 import { DocumentCard, TripDocumentView } from '@/src/features/documents/DocumentCard';
+import { DocumentRequirementForm } from '@/src/features/documents/DocumentRequirementForm';
+import { DocumentRequirementList } from '@/src/features/documents/DocumentRequirementList';
+import { DocumentReviewHistory, DocumentReviewEventView } from '@/src/features/documents/DocumentReviewHistory';
+import { DocumentSummaryPanel } from '@/src/features/documents/DocumentSummaryPanel';
+import { DocumentRequirementView } from '@/src/features/documents/documentRequirementTypes';
 import { DocumentReviewPanel } from '@/src/features/documents/DocumentReviewPanel';
 import { TripOfferPanel } from '@/src/features/dispatcher/TripOfferPanel';
 import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { TripHeader } from '@/src/features/trips/TripHeader';
 import { formatCurrency } from '@/src/utils/formatCurrency';
 import { formatDate } from '@/src/utils/formatDate';
+import { getActionErrorMessage } from '@/src/utils/getActionErrorMessage';
 
 type Tab = 'info' | 'docs' | 'events';
 
@@ -28,13 +34,23 @@ export default function DispatcherTripDetailScreen() {
   const { tripId } = useLocalSearchParams<{ tripId?: string }>();
   const resolvedTripId = tripId as Id<'trips'> | undefined;
   const detail = useQuery(api.trips.getDetailForDispatcher, resolvedTripId ? { tripId: resolvedTripId } : 'skip');
+  const reviewEvents = useQuery(
+    api.tripDocumentReviewEvents.listReviewEventsByTripForDispatcher,
+    resolvedTripId ? { tripId: resolvedTripId } : 'skip',
+  );
   const drivers = useQuery(api.drivers.listForCurrentCompany, {});
   const offerToDrivers = useMutation(api.trips.offerToDriversForDispatcher);
   const cancelTrip = useMutation(api.trips.cancelTripForDispatcher);
+  const closeTrip = useMutation(api.trips.closeTripForDispatcher);
+  const waiveRequirement = useMutation(api.tripDocumentRequirements.waiveForTripByDispatcher);
+  const reactivateRequirement = useMutation(api.tripDocumentRequirements.reactivateForTripByDispatcher);
+  const updateRequirementDueDate = useMutation(api.tripDocumentRequirements.updateRequirementDueDateByDispatcher);
   const [selectedDriverIds, setSelectedDriverIds] = useState<Id<'drivers'>[]>([]);
   const [offering, setOffering] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [message, setMessage] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<Tab>('info');
@@ -84,7 +100,55 @@ export default function DispatcherTripDetailScreen() {
     }
   };
 
-  if (detail === undefined || drivers === undefined) {
+  const handleClose = async () => {
+    if (detail?.documentSummary.isComplete && !confirmClose) {
+      setConfirmClose(true);
+      return;
+    }
+
+    setClosing(true);
+    setMessage(undefined);
+    setError(undefined);
+
+    try {
+      await closeTrip({ tripId: resolvedTripId });
+      setConfirmClose(false);
+      setMessage('Viaje cerrado correctamente.');
+    } catch (closeError) {
+      setError(getActionErrorMessage(closeError));
+    } finally {
+      setClosing(false);
+    }
+  };
+
+  const handleWaiveRequirement = async (
+    requirementId: Id<'tripDocumentRequirements'>,
+    waiverReason: string,
+  ) => {
+    setMessage(undefined);
+    setError(undefined);
+    await waiveRequirement({ requirementId, waiverReason });
+    setMessage('Requisito eximido.');
+  };
+
+  const handleReactivateRequirement = async (requirementId: Id<'tripDocumentRequirements'>) => {
+    setMessage(undefined);
+    setError(undefined);
+    await reactivateRequirement({ requirementId });
+    setMessage('Requisito reactivado.');
+  };
+
+  const handleUpdateRequirementDueDate = async (
+    requirementId: Id<'tripDocumentRequirements'>,
+    dueAt?: string,
+  ) => {
+    setMessage(undefined);
+    setError(undefined);
+    await updateRequirementDueDate({ requirementId, dueAt });
+    setMessage(dueAt ? 'Fecha límite actualizada.' : 'Fecha límite limpiada.');
+  };
+
+  if (detail === undefined || drivers === undefined || reviewEvents === undefined) {
     return (
       <AppScreen>
         <AppLoading message="Cargando viaje" />
@@ -97,8 +161,12 @@ export default function DispatcherTripDetailScreen() {
   const activeDrivers = drivers.filter((driver) => driver.status === 'ACTIVE');
   const driverName = detail.acceptedDriver?.fullName ?? detail.assignedDriver?.fullName ?? 'Sin conductor';
   const documents = detail.documents as TripDocumentView[];
+  const requirements = detail.documentRequirements as DocumentRequirementView[];
   const companyDocuments = documents.filter((document) => document.direction === 'COMPANY_TO_DRIVER');
   const driverDocuments = documents.filter((document) => document.direction === 'DRIVER_TO_COMPANY');
+  const companyRequirements = requirements.filter((requirement) => requirement.direction === 'COMPANY_TO_DRIVER');
+  const driverRequirements = requirements.filter((requirement) => requirement.direction === 'DRIVER_TO_COMPANY');
+  const canCloseTrip = detail.trip.status !== 'CLOSED' && detail.trip.status !== 'CANCELLED';
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'info', label: 'Info y conductor' },
@@ -141,18 +209,18 @@ export default function DispatcherTripDetailScreen() {
       </SafeAreaView>
 
       <AppScreen scroll key={activeTab}>
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+        {message ? (
+          <View style={styles.messageBox}>
+            <Text style={styles.messageText}>{message}</Text>
+          </View>
+        ) : null}
         {activeTab === 'info' ? (
           <>
-            {error ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-            {message ? (
-              <View style={styles.messageBox}>
-                <Text style={styles.messageText}>{message}</Text>
-              </View>
-            ) : null}
             <AppCard>
               <View style={styles.tripHeader}>
                 <TripHeader
@@ -250,7 +318,59 @@ export default function DispatcherTripDetailScreen() {
 
         {activeTab === 'docs' ? (
           <>
-            <Text style={styles.sectionTitle}>Documentos para el conductor</Text>
+            <Text style={styles.sectionTitle}>Checklist documental</Text>
+            <DocumentSummaryPanel summary={detail.documentSummary} />
+            <DocumentRequirementList
+              title="Documentos de la empresa"
+              requirements={companyRequirements}
+              actor="dispatcher"
+              emptyText="Este viaje no tiene requisitos para documentos de la empresa."
+              onWaive={handleWaiveRequirement}
+              onReactivate={handleReactivateRequirement}
+              onUpdateDueDate={handleUpdateRequirementDueDate}
+            />
+            <DocumentRequirementList
+              title="Documentos del conductor"
+              requirements={driverRequirements}
+              actor="dispatcher"
+              emptyText="Este viaje no tiene requisitos para documentos del conductor."
+              onWaive={handleWaiveRequirement}
+              onReactivate={handleReactivateRequirement}
+              onUpdateDueDate={handleUpdateRequirementDueDate}
+            />
+            <DocumentRequirementForm tripId={resolvedTripId} />
+            {canCloseTrip ? (
+              <AppCard style={styles.closeCard}>
+                <Text style={styles.sectionTitle}>Cierre operativo</Text>
+                {confirmClose ? (
+                  <Text style={styles.confirmText}>Confirma el cierre del viaje.</Text>
+                ) : null}
+                {!detail.documentSummary.isComplete ? (
+                  <Text style={styles.emptyText}>
+                    No puedes cerrar este viaje porque aún hay documentos requeridos pendientes, en revisión o rechazados.
+                  </Text>
+                ) : (
+                  <Text style={styles.readyText}>Este viaje está listo para cerrar.</Text>
+                )}
+                <AppButton
+                  label={confirmClose ? 'Confirmar cierre' : 'Cerrar viaje'}
+                  variant="success"
+                  fullWidth
+                  loading={closing}
+                  onPress={handleClose}
+                />
+                {confirmClose ? (
+                  <AppButton
+                    label="Mantener viaje abierto"
+                    variant="secondary"
+                    fullWidth
+                    disabled={closing}
+                    onPress={() => setConfirmClose(false)}
+                  />
+                ) : null}
+              </AppCard>
+            ) : null}
+            <Text style={styles.sectionTitle}>Archivos para el conductor</Text>
             <CompanyDocumentUploadPanel tripId={resolvedTripId} />
             {companyDocuments.length === 0 ? (
               <AppCard>
@@ -263,8 +383,9 @@ export default function DispatcherTripDetailScreen() {
                 ))}
               </>
             )}
-            <Text style={styles.sectionTitle}>Documentos del conductor</Text>
+            <Text style={styles.sectionTitle}>Archivos del conductor</Text>
             <DocumentReviewPanel documents={driverDocuments} />
+            <DocumentReviewHistory events={reviewEvents as DocumentReviewEventView[]} />
           </>
         ) : null}
 
@@ -274,16 +395,6 @@ export default function DispatcherTripDetailScreen() {
       </AppScreen>
     </View>
   );
-}
-
-function getActionErrorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : '';
-
-  if (message) {
-    return message;
-  }
-
-  return 'No se pudo completar la acción.';
 }
 
 const styles = StyleSheet.create({
@@ -429,6 +540,14 @@ const styles = StyleSheet.create({
     padding: spacing[4],
   },
   messageText: {
+    color: colors.success,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+  },
+  closeCard: {
+    gap: spacing[3],
+  },
+  readyText: {
     color: colors.success,
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,

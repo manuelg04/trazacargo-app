@@ -7,6 +7,7 @@ import { AppButton } from '@/src/components/AppButton';
 import { AppInput } from '@/src/components/AppInput';
 import { DocumentCard, TripDocumentView } from '@/src/features/documents/DocumentCard';
 import { colors, fontFamily, fontSize, radius, spacing } from '@/constants/theme';
+import { getActionErrorMessage } from '@/src/utils/getActionErrorMessage';
 
 type DocumentReviewPanelProps = {
   documents: TripDocumentView[];
@@ -128,11 +129,6 @@ export function DocumentReviewPanel({ documents }: DocumentReviewPanelProps) {
       })}
     </View>
   );
-}
-
-function getActionErrorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : '';
-  return message || 'No se pudo completar la acción.';
 }
 
 const styles = StyleSheet.create({

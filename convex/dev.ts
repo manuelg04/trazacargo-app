@@ -2,6 +2,10 @@ import { Id } from './_generated/dataModel';
 import { mutation, MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { accessCodeStatusValidator, userRoleValidator } from './schema';
+import {
+  createDefaultRequirementsForTrip,
+  updateRequirementAfterDocumentCreated,
+} from './tripDocumentRequirements';
 
 const demoCompanyName = 'Transportes Demo Bucaramanga';
 
@@ -97,6 +101,13 @@ export const seedDemoData = mutation({
       now,
     });
     created = created || offeredTripResult.created || acceptedTripResult.created || secondDriverTripResult.created;
+    created =
+      (await createDefaultRequirementsForTrip(ctx, companyId, offeredTripResult.tripId, undefined, now)) > 0 || created;
+    created =
+      (await createDefaultRequirementsForTrip(ctx, companyId, acceptedTripResult.tripId, undefined, now)) > 0 || created;
+    created =
+      (await createDefaultRequirementsForTrip(ctx, companyId, secondDriverTripResult.tripId, undefined, now)) > 0 ||
+      created;
 
     created =
       (await ensureTripOffer(ctx, companyId, offeredTripResult.tripId, firstDriverResult.driverId, 'PENDING', now)) ||
@@ -204,6 +215,14 @@ export const clearDemoData = mutation({
         .query('tripDocuments')
         .withIndex('by_company', (q) => q.eq('companyId', company._id))
         .collect();
+      const requirements = await ctx.db
+        .query('tripDocumentRequirements')
+        .withIndex('by_company', (q) => q.eq('companyId', company._id))
+        .collect();
+      const reviewEvents = await ctx.db
+        .query('tripDocumentReviewEvents')
+        .withIndex('by_company', (q) => q.eq('companyId', company._id))
+        .collect();
       const events = await ctx.db
         .query('tripEvents')
         .withIndex('by_company', (q) => q.eq('companyId', company._id))
@@ -237,6 +256,14 @@ export const clearDemoData = mutation({
 
       for (const document of documents) {
         await ctx.db.delete(document._id);
+      }
+
+      for (const requirement of requirements) {
+        await ctx.db.delete(requirement._id);
+      }
+
+      for (const reviewEvent of reviewEvents) {
+        await ctx.db.delete(reviewEvent._id);
       }
 
       for (const event of events) {
@@ -461,25 +488,39 @@ async function ensureDemoDocument(
     .withIndex('by_trip_and_created_at', (q) => q.eq('tripId', tripId))
     .collect();
   const existingDocument = documents.find((document) => document.documentType === input.documentType);
+  const requirements = await ctx.db
+    .query('tripDocumentRequirements')
+    .withIndex('by_trip_and_direction', (q) => q.eq('tripId', tripId).eq('direction', 'COMPANY_TO_DRIVER'))
+    .collect();
+  const requirement = requirements.find(
+    (candidate) => candidate.companyId === companyId && candidate.documentType === input.documentType,
+  );
 
   if (existingDocument) {
     const needsDirection = !existingDocument.direction;
     const needsFileName = !existingDocument.originalFileName && existingDocument.fileName;
+    const needsRequirement = requirement && existingDocument.requirementId !== requirement._id;
 
-    if (needsDirection || needsFileName) {
+    if (needsDirection || needsFileName || needsRequirement) {
       await ctx.db.patch(existingDocument._id, {
         direction: needsDirection ? 'COMPANY_TO_DRIVER' : existingDocument.direction,
         originalFileName: needsFileName ? existingDocument.fileName : existingDocument.originalFileName,
+        requirementId: needsRequirement ? requirement._id : existingDocument.requirementId,
         updatedAt: input.createdAt,
       });
+    }
+
+    if (requirement) {
+      await updateRequirementAfterDocumentCreated(ctx, requirement._id, existingDocument._id, 'COMPANY_TO_DRIVER', input.createdAt);
     }
 
     return false;
   }
 
-  await ctx.db.insert('tripDocuments', {
+  const documentId = await ctx.db.insert('tripDocuments', {
     companyId,
     tripId,
+    requirementId: requirement?._id,
     documentType: input.documentType,
     direction: 'COMPANY_TO_DRIVER',
     displayName: input.displayName,
@@ -490,6 +531,10 @@ async function ensureDemoDocument(
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
   });
+
+  if (requirement) {
+    await updateRequirementAfterDocumentCreated(ctx, requirement._id, documentId, 'COMPANY_TO_DRIVER', input.createdAt);
+  }
 
   return true;
 }

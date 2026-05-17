@@ -19,6 +19,7 @@ import { getMimeTypeLabel } from '@/src/utils/getMimeTypeLabel';
 
 export type TripDocumentView = {
   _id: Id<'tripDocuments'>;
+  requirementId?: Id<'tripDocumentRequirements'>;
   documentType: DocumentType;
   direction: DocumentDirection;
   displayName: string;

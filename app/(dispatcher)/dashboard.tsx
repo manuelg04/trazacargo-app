@@ -33,6 +33,9 @@ export default function DispatcherDashboardScreen() {
             <DispatcherStatCard label="Cerrados" value={stats.closedTrips} />
             <DispatcherStatCard label="Conductores activos" value={stats.activeDrivers} />
             <DispatcherStatCard label="Ofertas pendientes" value={stats.pendingOffers} />
+            <DispatcherStatCard label="Docs pendientes" value={stats.tripsWithPendingDocuments} />
+            <DispatcherStatCard label="Docs rechazados" value={stats.tripsWithRejectedDocuments} />
+            <DispatcherStatCard label="Listos para cerrar" value={stats.tripsReadyToClose} />
           </View>
         ) : null}
         <View style={styles.sectionHeader}>

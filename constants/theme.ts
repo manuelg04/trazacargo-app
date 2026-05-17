@@ -85,10 +85,13 @@ export const tripStateColors: Record<string, { bg: string; text: string; border:
 
 export const docStateColors: Record<string, { bg: string; text: string; border: string }> = {
   PENDING:   { bg: '#FEF4E3', text: '#C27210', border: '#E8C070' },
+  IN_REVIEW: { bg: '#EBF2FE', text: '#1E5BAD', border: '#96B8EE' },
   AVAILABLE: { bg: '#F0F0ED', text: '#6E8078', border: '#D4D4CE' },
   SUBMITTED: { bg: '#EBF2FE', text: '#1E5BAD', border: '#96B8EE' },
+  SATISFIED: { bg: '#E8F5ED', text: '#1A7A46', border: '#9ACDB0' },
   APPROVED:  { bg: '#E8F5ED', text: '#1A7A46', border: '#9ACDB0' },
   REJECTED:  { bg: '#FEF0F0', text: '#C23030', border: '#E0A0A0' },
+  WAIVED:    { bg: '#F0F0ED', text: '#6E8078', border: '#D4D4CE' },
   ARCHIVED:  { bg: '#F0F0ED', text: '#6E8078', border: '#D4D4CE' },
 };
 
@@ -126,8 +129,9 @@ export const tripStateLabels: Record<string, string> = {
   DOCUMENTS_APPROVED: 'Docs aprobados', CLOSED: 'Cerrado', CANCELLED: 'Cancelado',
 };
 export const docStateLabels: Record<string, string> = {
-  PENDING: 'Pendiente', AVAILABLE: 'Disponible', SUBMITTED: 'En revisión',
-  APPROVED: 'Aprobado', REJECTED: 'Rechazado', ARCHIVED: 'Archivado',
+  PENDING: 'Pendiente', IN_REVIEW: 'En revisión', AVAILABLE: 'Disponible',
+  SUBMITTED: 'En revisión', SATISFIED: 'Cumplido', APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado', WAIVED: 'No aplica', ARCHIVED: 'Archivado',
 };
 export const roleLabels: Record<string, string> = {
   DRIVER: 'Conductor', DISPATCHER: 'Despachador', ADMIN: 'Administrador',
@@ -152,7 +156,8 @@ export const eventLabels: Record<string, string> = {
   TRIP_ACCEPTED: 'Viaje aceptado', ARRIVED_TO_LOADING: 'Llegó a cargue',
   LOADED: 'Cargado', STARTED_ROUTE: 'Inició ruta',
   ARRIVED_TO_UNLOADING: 'Llegó a descargue', UNLOADED: 'Descargado',
-  DOCUMENTS_SUBMITTED: 'Documentos enviados', ISSUE_REPORTED: 'Novedad reportada',
+  DOCUMENTS_SUBMITTED: 'Documentos enviados', TRIP_CLOSED: 'Viaje cerrado',
+  ISSUE_REPORTED: 'Novedad reportada',
 };
 
 export const fontFamily = {

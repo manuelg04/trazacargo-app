@@ -3,6 +3,7 @@ import { Id } from './_generated/dataModel';
 import { MutationCtx, mutation, query } from './_generated/server';
 import { documentDirectionValidator, documentTypeValidator } from './schema';
 import {
+  assertAllowedFileMetadata,
   assertCompanyDocumentType,
   assertDriverDocumentType,
   assertRequiredText,
@@ -18,6 +19,13 @@ import {
   requireDispatcherOrAdminProfile,
   requireDriverProfile,
 } from './lib/permissions';
+import {
+  updateRequirementAfterDocumentApproved,
+  updateRequirementAfterDocumentCreated,
+  updateRequirementAfterDocumentRejected,
+  validateRequirementForDocument,
+} from './tripDocumentRequirements';
+import { createTripDocumentReviewEvent } from './tripDocumentReviewEvents';
 
 export const generateUploadUrlForCurrentUser = mutation({
   args: {
@@ -51,6 +59,7 @@ export const createCompanyDocumentForTrip = mutation({
     originalFileName: v.string(),
     mimeType: v.optional(v.string()),
     sizeBytes: v.optional(v.number()),
+    requirementId: v.optional(v.id('tripDocumentRequirements')),
   },
   returns: tripDocumentWithUrlReturn,
   handler: async (ctx, args) => {
@@ -61,10 +70,21 @@ export const createCompanyDocumentForTrip = mutation({
     const now = Date.now();
 
     assertCompanyDocumentType(args.documentType);
+    assertAllowedFileMetadata(args.mimeType, args.sizeBytes);
+
+    if (args.requirementId) {
+      await validateRequirementForDocument(ctx, {
+        requirementId: args.requirementId,
+        trip,
+        direction: 'COMPANY_TO_DRIVER',
+        documentType: args.documentType,
+      });
+    }
 
     const documentId = await ctx.db.insert('tripDocuments', {
       companyId: trip.companyId,
       tripId: args.tripId,
+      requirementId: args.requirementId,
       documentType: args.documentType,
       direction: 'COMPANY_TO_DRIVER',
       displayName,
@@ -79,6 +99,21 @@ export const createCompanyDocumentForTrip = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    if (args.requirementId) {
+      await updateRequirementAfterDocumentCreated(ctx, args.requirementId, documentId, 'COMPANY_TO_DRIVER', now);
+    }
+    await createTripDocumentReviewEvent(ctx, {
+      companyId: trip.companyId,
+      tripId: args.tripId,
+      requirementId: args.requirementId,
+      documentId,
+      actorUserId: userId,
+      actorRole: profile.role,
+      eventType: 'DOCUMENT_SUBMITTED',
+      createdAt: now,
+    });
+
     const document = await ctx.db.get(documentId);
 
     if (!document) {
@@ -99,6 +134,7 @@ export const createDriverDocumentForTrip = mutation({
     mimeType: v.optional(v.string()),
     sizeBytes: v.optional(v.number()),
     parentDocumentId: v.optional(v.id('tripDocuments')),
+    requirementId: v.optional(v.id('tripDocumentRequirements')),
   },
   returns: tripDocumentWithUrlReturn,
   handler: async (ctx, args) => {
@@ -109,10 +145,14 @@ export const createDriverDocumentForTrip = mutation({
     const now = Date.now();
 
     assertDriverDocumentType(args.documentType);
+    assertAllowedFileMetadata(args.mimeType, args.sizeBytes);
 
     if (!belongsToDriver) {
       throw new ConvexError('Solo puedes subir documentos de viajes aceptados o asignados.');
     }
+
+    let resolvedRequirementId = args.requirementId;
+    let matchedRequirementStatus: 'PENDING' | 'IN_REVIEW' | 'SATISFIED' | 'REJECTED' | 'WAIVED' | undefined;
 
     if (args.parentDocumentId) {
       const parentDocument = await ctx.db.get(args.parentDocumentId);
@@ -126,11 +166,30 @@ export const createDriverDocumentForTrip = mutation({
       ) {
         throw new ConvexError('No se puede reenviar este documento.');
       }
+
+      if (parentDocument.requirementId) {
+        if (resolvedRequirementId && resolvedRequirementId !== parentDocument.requirementId) {
+          throw new ConvexError('El requisito no coincide con el documento rechazado.');
+        }
+
+        resolvedRequirementId = parentDocument.requirementId;
+      }
+    }
+
+    if (resolvedRequirementId) {
+      const requirement = await validateRequirementForDocument(ctx, {
+        requirementId: resolvedRequirementId,
+        trip,
+        direction: 'DRIVER_TO_COMPANY',
+        documentType: args.documentType,
+      });
+      matchedRequirementStatus = requirement.status;
     }
 
     const documentId = await ctx.db.insert('tripDocuments', {
       companyId: trip.companyId,
       tripId: args.tripId,
+      requirementId: resolvedRequirementId,
       documentType: args.documentType,
       direction: 'DRIVER_TO_COMPANY',
       displayName,
@@ -146,6 +205,21 @@ export const createDriverDocumentForTrip = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    if (resolvedRequirementId) {
+      await updateRequirementAfterDocumentCreated(ctx, resolvedRequirementId, documentId, 'DRIVER_TO_COMPANY', now);
+    }
+    await createTripDocumentReviewEvent(ctx, {
+      companyId: trip.companyId,
+      tripId: args.tripId,
+      requirementId: resolvedRequirementId,
+      documentId,
+      actorUserId: userId,
+      actorRole: 'DRIVER',
+      eventType: args.parentDocumentId || matchedRequirementStatus === 'REJECTED' ? 'DOCUMENT_RESUBMITTED' : 'DOCUMENT_SUBMITTED',
+      createdAt: now,
+    });
+
     const document = await ctx.db.get(documentId);
 
     if (!document) {
@@ -204,6 +278,21 @@ export const approveDriverDocument = mutation({
       reviewedAt: now,
       updatedAt: now,
     });
+
+    if (document.requirementId) {
+      await updateRequirementAfterDocumentApproved(ctx, document.requirementId, args.documentId, now);
+    }
+    await createTripDocumentReviewEvent(ctx, {
+      companyId: document.companyId,
+      tripId: document.tripId,
+      requirementId: document.requirementId,
+      documentId: args.documentId,
+      actorUserId: userId,
+      actorRole: profile.role,
+      eventType: 'DOCUMENT_APPROVED',
+      createdAt: now,
+    });
+
     const updatedDocument = await ctx.db.get(args.documentId);
 
     if (!updatedDocument) {
@@ -238,6 +327,22 @@ export const rejectDriverDocument = mutation({
       reviewedAt: now,
       updatedAt: now,
     });
+
+    if (document.requirementId) {
+      await updateRequirementAfterDocumentRejected(ctx, document.requirementId, args.documentId, now);
+    }
+    await createTripDocumentReviewEvent(ctx, {
+      companyId: document.companyId,
+      tripId: document.tripId,
+      requirementId: document.requirementId,
+      documentId: args.documentId,
+      actorUserId: userId,
+      actorRole: profile.role,
+      eventType: 'DOCUMENT_REJECTED',
+      note: rejectionReason,
+      createdAt: now,
+    });
+
     const updatedDocument = await ctx.db.get(args.documentId);
 
     if (!updatedDocument) {
@@ -254,14 +359,24 @@ export const archiveDocumentForDispatcher = mutation({
   },
   returns: tripDocumentWithUrlReturn,
   handler: async (ctx, args) => {
-    const { profile } = await requireDispatcherOrAdminProfile(ctx);
-    await getDispatcherDocument(ctx, args.documentId, profile.companyId);
+    const { userId, profile } = await requireDispatcherOrAdminProfile(ctx);
+    const document = await getDispatcherDocument(ctx, args.documentId, profile.companyId);
 
     const now = Date.now();
 
     await ctx.db.patch(args.documentId, {
       status: 'ARCHIVED',
       updatedAt: now,
+    });
+    await createTripDocumentReviewEvent(ctx, {
+      companyId: document.companyId,
+      tripId: document.tripId,
+      requirementId: document.requirementId,
+      documentId: args.documentId,
+      actorUserId: userId,
+      actorRole: profile.role,
+      eventType: 'DOCUMENT_ARCHIVED',
+      createdAt: now,
     });
     const updatedDocument = await ctx.db.get(args.documentId);
 

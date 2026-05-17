@@ -10,6 +10,13 @@ import {
 } from './schema';
 import { listTripDocumentsWithUrls, tripDocumentWithUrlReturn } from './lib/documents';
 import {
+  computeTripDocumentSummary,
+  createDefaultRequirementsForTrip,
+  documentRequirementWithDocumentsReturn,
+  documentSummaryReturn,
+  listSerializedRequirementsByTrip,
+} from './tripDocumentRequirements';
+import {
   assertDispatcherCanAccessTrip,
   assertDriverBelongsToCompany,
   assertDriverCanAccessTrip,
@@ -43,6 +50,9 @@ const tripFields = {
   acceptedByDriverId: v.optional(v.id('drivers')),
   status: tripStatusValidator,
   observations: v.optional(v.string()),
+  readyToCloseAt: v.optional(v.number()),
+  closedAt: v.optional(v.number()),
+  closedByUserId: v.optional(v.id('users')),
   createdAt: v.number(),
   updatedAt: v.number(),
 };
@@ -50,6 +60,7 @@ const tripFields = {
 const tripWithCompanyReturn = v.object({
   ...tripFields,
   company: companyReturn,
+  documentSummary: documentSummaryReturn,
 });
 
 const availableTripReturn = v.object({
@@ -103,7 +114,29 @@ const dispatcherTripReturn = v.object({
   acceptedDriver: v.union(v.null(), driverReturn),
   offerCount: v.number(),
   pendingOfferCount: v.number(),
+  documentSummary: documentSummaryReturn,
 });
+
+const dispatcherDocumentStateValidator = v.union(
+  v.literal('ALL'),
+  v.literal('COMPLETE'),
+  v.literal('PENDING'),
+  v.literal('IN_REVIEW'),
+  v.literal('REJECTED'),
+  v.literal('READY_TO_CLOSE'),
+);
+
+const driverDocumentStateValidator = v.union(
+  v.literal('ALL'),
+  v.literal('COMPLETE'),
+  v.literal('PENDING'),
+  v.literal('IN_REVIEW'),
+  v.literal('REJECTED'),
+);
+
+type DocumentSummary = Awaited<ReturnType<typeof computeTripDocumentSummary>>;
+type DispatcherDocumentState = 'ALL' | 'COMPLETE' | 'PENDING' | 'IN_REVIEW' | 'REJECTED' | 'READY_TO_CLOSE';
+type DriverDocumentState = Exclude<DispatcherDocumentState, 'READY_TO_CLOSE'>;
 
 export const listAvailableForCurrentDriver = query({
   args: {},
@@ -143,9 +176,11 @@ export const listAvailableForCurrentDriver = query({
 });
 
 export const listMineForCurrentDriver = query({
-  args: {},
+  args: {
+    documentState: v.optional(driverDocumentStateValidator),
+  },
   returns: v.array(tripWithCompanyReturn),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const { profile, driverId } = await requireDriverProfile(ctx);
     const acceptedTrips = await ctx.db
       .query('trips')
@@ -169,13 +204,17 @@ export const listMineForCurrentDriver = query({
       }
     }
 
-    const results: (Doc<'trips'> & { company: Doc<'companies'> })[] = [];
+    const results: (Doc<'trips'> & { company: Doc<'companies'>; documentSummary: Awaited<ReturnType<typeof computeTripDocumentSummary>> })[] = [];
 
     for (const trip of tripsById.values()) {
       const company = await ctx.db.get(trip.companyId);
 
       if (company) {
-        results.push({ ...trip, company });
+        const documentSummary = await computeTripDocumentSummary(ctx, trip._id);
+
+        if (matchesDocumentState(args.documentState ?? 'ALL', documentSummary, trip)) {
+          results.push({ ...trip, company, documentSummary });
+        }
       }
     }
 
@@ -191,6 +230,8 @@ export const getDetailForCurrentDriver = query({
     trip: v.object(tripFields),
     company: companyReturn,
     documents: v.array(tripDocumentWithUrlReturn),
+    documentRequirements: v.array(documentRequirementWithDocumentsReturn),
+    documentSummary: documentSummaryReturn,
     events: v.array(tripEventReturn),
     access: v.object({
       hasPendingOffer: v.boolean(),
@@ -207,6 +248,8 @@ export const getDetailForCurrentDriver = query({
     }
 
     const documents = await listTripDocumentsWithUrls(ctx, args.tripId);
+    const documentRequirements = await listSerializedRequirementsByTrip(ctx, args.tripId);
+    const documentSummary = await computeTripDocumentSummary(ctx, args.tripId);
     const events = await ctx.db
       .query('tripEvents')
       .withIndex('by_trip_and_occurred_at', (q) => q.eq('tripId', args.tripId))
@@ -226,6 +269,8 @@ export const getDetailForCurrentDriver = query({
       trip,
       company,
       documents,
+      documentRequirements,
+      documentSummary,
       events: eventsWithDrivers,
       access: {
         hasPendingOffer: offer?.status === 'PENDING' && trip.status === 'OFFERED',
@@ -338,6 +383,9 @@ export const getDashboardStatsForCurrentCompany = query({
     closedTrips: v.number(),
     activeDrivers: v.number(),
     pendingOffers: v.number(),
+    tripsWithPendingDocuments: v.number(),
+    tripsWithRejectedDocuments: v.number(),
+    tripsReadyToClose: v.number(),
   }),
   handler: async (ctx) => {
     const { profile } = await requireDispatcherOrAdminProfile(ctx);
@@ -364,6 +412,26 @@ export const getDashboardStatsForCurrentCompany = query({
       'DOCUMENTS_APPROVED',
     ]);
 
+    let tripsWithPendingDocuments = 0;
+    let tripsWithRejectedDocuments = 0;
+    let tripsReadyToClose = 0;
+
+    for (const trip of trips) {
+      const documentSummary = await computeTripDocumentSummary(ctx, trip._id);
+
+      if (documentSummary.hasPending) {
+        tripsWithPendingDocuments += 1;
+      }
+
+      if (documentSummary.hasRejected) {
+        tripsWithRejectedDocuments += 1;
+      }
+
+      if (documentSummary.isComplete && trip.status !== 'CLOSED' && trip.status !== 'CANCELLED') {
+        tripsReadyToClose += 1;
+      }
+    }
+
     return {
       totalTrips: trips.length,
       offeredTrips: trips.filter((trip) => trip.status === 'OFFERED').length,
@@ -372,6 +440,9 @@ export const getDashboardStatsForCurrentCompany = query({
       closedTrips: trips.filter((trip) => trip.status === 'CLOSED').length,
       activeDrivers: activeDrivers.length,
       pendingOffers: pendingOffers.length,
+      tripsWithPendingDocuments,
+      tripsWithRejectedDocuments,
+      tripsReadyToClose,
     };
   },
 });
@@ -379,6 +450,7 @@ export const getDashboardStatsForCurrentCompany = query({
 export const listForCurrentCompany = query({
   args: {
     status: v.optional(tripStatusValidator),
+    documentState: v.optional(dispatcherDocumentStateValidator),
   },
   returns: v.array(dispatcherTripReturn),
   handler: async (ctx, args) => {
@@ -398,6 +470,7 @@ export const listForCurrentCompany = query({
       acceptedDriver: Doc<'drivers'> | null;
       offerCount: number;
       pendingOfferCount: number;
+      documentSummary: Awaited<ReturnType<typeof computeTripDocumentSummary>>;
     })[] = [];
 
     for (const trip of trips) {
@@ -407,6 +480,11 @@ export const listForCurrentCompany = query({
         .query('tripOffers')
         .withIndex('by_trip', (q) => q.eq('tripId', trip._id))
         .collect();
+      const documentSummary = await computeTripDocumentSummary(ctx, trip._id);
+
+      if (!matchesDocumentState(args.documentState ?? 'ALL', documentSummary, trip)) {
+        continue;
+      }
 
       results.push({
         ...trip,
@@ -414,6 +492,7 @@ export const listForCurrentCompany = query({
         acceptedDriver,
         offerCount: offers.length,
         pendingOfferCount: offers.filter((offer) => offer.status === 'PENDING').length,
+        documentSummary,
       });
     }
 
@@ -432,6 +511,8 @@ export const getDetailForDispatcher = query({
     acceptedDriver: v.union(v.null(), driverReturn),
     offers: v.array(offerWithDriverReturn),
     documents: v.array(tripDocumentWithUrlReturn),
+    documentRequirements: v.array(documentRequirementWithDocumentsReturn),
+    documentSummary: documentSummaryReturn,
     events: v.array(tripEventReturn),
   }),
   handler: async (ctx, args) => {
@@ -460,6 +541,8 @@ export const getDetailForDispatcher = query({
     }
 
     const documents = await listTripDocumentsWithUrls(ctx, args.tripId);
+    const documentRequirements = await listSerializedRequirementsByTrip(ctx, args.tripId);
+    const documentSummary = await computeTripDocumentSummary(ctx, args.tripId);
     const events = await ctx.db
       .query('tripEvents')
       .withIndex('by_trip_and_occurred_at', (q) => q.eq('tripId', args.tripId))
@@ -482,6 +565,8 @@ export const getDetailForDispatcher = query({
       acceptedDriver,
       offers: offers.sort((a, b) => b.createdAt - a.createdAt),
       documents,
+      documentRequirements,
+      documentSummary,
       events: eventsWithDrivers,
     };
   },
@@ -501,7 +586,7 @@ export const createForDispatcher = mutation({
   },
   returns: v.object(tripFields),
   handler: async (ctx, args) => {
-    const { profile } = await requireDispatcherOrAdminProfile(ctx);
+    const { userId, profile } = await requireDispatcherOrAdminProfile(ctx);
     const now = Date.now();
     const originCity = args.originCity.trim();
     const destinationCity = args.destinationCity.trim();
@@ -532,6 +617,7 @@ export const createForDispatcher = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    await createDefaultRequirementsForTrip(ctx, profile.companyId, tripId, userId, now);
     const trip = await ctx.db.get(tripId);
 
     if (!trip) {
@@ -647,6 +733,58 @@ export const cancelTripForDispatcher = mutation({
   },
 });
 
+export const closeTripForDispatcher = mutation({
+  args: {
+    tripId: v.id('trips'),
+  },
+  returns: v.object(tripFields),
+  handler: async (ctx, args) => {
+    const { userId, profile } = await requireDispatcherOrAdminProfile(ctx);
+    const trip = await assertDispatcherCanAccessTrip(ctx, profile, args.tripId);
+
+    if (trip.status === 'CANCELLED') {
+      throw new ConvexError('No se puede cerrar un viaje cancelado.');
+    }
+
+    if (trip.status === 'CLOSED') {
+      throw new ConvexError('Este viaje ya está cerrado.');
+    }
+
+    const documentSummary = await computeTripDocumentSummary(ctx, args.tripId);
+
+    if (!documentSummary.isComplete) {
+      throw new ConvexError('No puedes cerrar este viaje porque aún hay documentos requeridos pendientes, en revisión o rechazados.');
+    }
+
+    const now = Date.now();
+
+    await ctx.db.patch(args.tripId, {
+      status: 'CLOSED',
+      readyToCloseAt: trip.readyToCloseAt ?? now,
+      closedAt: now,
+      closedByUserId: userId,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert('tripEvents', {
+      companyId: trip.companyId,
+      tripId: args.tripId,
+      eventType: 'TRIP_CLOSED',
+      note: 'Viaje cerrado desde la consola.',
+      occurredAt: now,
+      createdAt: now,
+    });
+
+    const closedTrip = await ctx.db.get(args.tripId);
+
+    if (!closedTrip) {
+      throw new ConvexError('No se pudo cerrar el viaje.');
+    }
+
+    return closedTrip;
+  },
+});
+
 async function ensureTripAcceptedEvent(
   ctx: MutationCtx,
   companyId: Id<'companies'>,
@@ -710,4 +848,26 @@ function parseOptionalMoney(value: string | undefined, message: string) {
   }
 
   return parsedValue;
+}
+
+function matchesDocumentState(
+  documentState: DispatcherDocumentState | DriverDocumentState,
+  documentSummary: DocumentSummary,
+  trip: Pick<Doc<'trips'>, 'status'>,
+) {
+  switch (documentState) {
+    case 'COMPLETE':
+      return documentSummary.isComplete;
+    case 'PENDING':
+      return documentSummary.hasPending;
+    case 'IN_REVIEW':
+      return documentSummary.hasInReview;
+    case 'REJECTED':
+      return documentSummary.hasRejected;
+    case 'READY_TO_CLOSE':
+      return documentSummary.isComplete && trip.status !== 'CLOSED' && trip.status !== 'CANCELLED';
+    case 'ALL':
+    default:
+      return true;
+  }
 }
