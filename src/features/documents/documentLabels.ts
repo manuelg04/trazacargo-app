@@ -2,6 +2,8 @@ export type DocumentDirection = 'COMPANY_TO_DRIVER' | 'DRIVER_TO_COMPANY';
 
 export type DocumentStatus = 'PENDING' | 'AVAILABLE' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
 
+export type DocumentRequirementStatus = 'PENDING' | 'IN_REVIEW' | 'SATISFIED' | 'REJECTED' | 'WAIVED';
+
 export type DocumentType =
   | 'MANIFEST'
   | 'REMITTANCE'
@@ -27,6 +29,14 @@ export const documentStatusLabels: Record<DocumentStatus, string> = {
   APPROVED: 'Aprobado',
   REJECTED: 'Rechazado',
   ARCHIVED: 'Archivado',
+};
+
+export const documentRequirementStatusLabels: Record<DocumentRequirementStatus, string> = {
+  PENDING: 'Pendiente',
+  IN_REVIEW: 'En revisión',
+  SATISFIED: 'Cumplido',
+  REJECTED: 'Rechazado',
+  WAIVED: 'No aplica',
 };
 
 export const documentTypeLabels: Record<DocumentType, string> = {

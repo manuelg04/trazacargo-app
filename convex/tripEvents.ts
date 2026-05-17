@@ -27,6 +27,7 @@ type TripEventType =
   | 'ARRIVED_TO_UNLOADING'
   | 'UNLOADED'
   | 'DOCUMENTS_SUBMITTED'
+  | 'TRIP_CLOSED'
   | 'ISSUE_REPORTED';
 
 type TripStatus =

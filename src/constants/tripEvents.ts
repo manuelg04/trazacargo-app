@@ -6,6 +6,7 @@ export const tripEventLabels = {
   ARRIVED_TO_UNLOADING: 'Llegada a descargue',
   UNLOADED: 'Descargado',
   DOCUMENTS_SUBMITTED: 'Documentos enviados',
+  TRIP_CLOSED: 'Viaje cerrado',
   ISSUE_REPORTED: 'Novedad reportada',
 } as const;
 

@@ -10,6 +10,7 @@ type UploadDocumentInput = {
   displayName?: string;
   file: UploadableFile;
   parentDocumentId?: Id<'tripDocuments'>;
+  requirementId?: Id<'tripDocumentRequirements'>;
 };
 
 type UseUploadDocumentInput = {
@@ -23,9 +24,10 @@ export function useUploadDocument({ tripId, direction }: UseUploadDocumentInput)
   const createDriverDocument = useMutation(api.tripDocuments.createDriverDocumentForTrip);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const clearError = useCallback(() => setError(undefined), []);
 
   const uploadDocument = useCallback(
-    async ({ documentType, displayName, file, parentDocumentId }: UploadDocumentInput) => {
+    async ({ documentType, displayName, file, parentDocumentId, requirementId }: UploadDocumentInput) => {
       setUploading(true);
       setError(undefined);
 
@@ -41,6 +43,7 @@ export function useUploadDocument({ tripId, direction }: UseUploadDocumentInput)
           originalFileName: file.name,
           mimeType: file.mimeType,
           sizeBytes: file.sizeBytes,
+          requirementId,
         };
 
         if (direction === 'COMPANY_TO_DRIVER') {
@@ -66,6 +69,6 @@ export function useUploadDocument({ tripId, direction }: UseUploadDocumentInput)
     uploadDocument,
     uploading,
     error,
-    clearError: () => setError(undefined),
+    clearError,
   };
 }

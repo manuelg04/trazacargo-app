@@ -58,6 +58,14 @@ export const documentDirectionValidator = v.union(
   v.literal('DRIVER_TO_COMPANY'),
 );
 
+export const documentRequirementStatusValidator = v.union(
+  v.literal('PENDING'),
+  v.literal('IN_REVIEW'),
+  v.literal('SATISFIED'),
+  v.literal('REJECTED'),
+  v.literal('WAIVED'),
+);
+
 export const uploadedByTypeValidator = v.union(
   v.literal('COMPANY'),
   v.literal('DRIVER'),
@@ -73,10 +81,22 @@ export const tripEventTypeValidator = v.union(
   v.literal('ARRIVED_TO_UNLOADING'),
   v.literal('UNLOADED'),
   v.literal('DOCUMENTS_SUBMITTED'),
+  v.literal('TRIP_CLOSED'),
   v.literal('ISSUE_REPORTED'),
 );
 
 export const userRoleValidator = v.union(v.literal('DRIVER'), v.literal('DISPATCHER'), v.literal('ADMIN'));
+
+export const documentReviewEventTypeValidator = v.union(
+  v.literal('DOCUMENT_SUBMITTED'),
+  v.literal('DOCUMENT_APPROVED'),
+  v.literal('DOCUMENT_REJECTED'),
+  v.literal('DOCUMENT_RESUBMITTED'),
+  v.literal('DOCUMENT_ARCHIVED'),
+  v.literal('REQUIREMENT_WAIVED'),
+  v.literal('REQUIREMENT_REACTIVATED'),
+  v.literal('REQUIREMENT_DUE_DATE_UPDATED'),
+);
 
 export const userProfileStatusValidator = v.union(v.literal('ACTIVE'), v.literal('DISABLED'));
 
@@ -135,6 +155,9 @@ export default defineSchema({
     acceptedByDriverId: v.optional(v.id('drivers')),
     status: tripStatusValidator,
     observations: v.optional(v.string()),
+    readyToCloseAt: v.optional(v.number()),
+    closedAt: v.optional(v.number()),
+    closedByUserId: v.optional(v.id('users')),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -160,6 +183,7 @@ export default defineSchema({
   tripDocuments: defineTable({
     companyId: v.id('companies'),
     tripId: v.id('trips'),
+    requirementId: v.optional(v.id('tripDocumentRequirements')),
     documentType: documentTypeValidator,
     direction: v.optional(documentDirectionValidator),
     displayName: v.string(),
@@ -181,7 +205,46 @@ export default defineSchema({
     .index('by_company', ['companyId'])
     .index('by_trip', ['tripId'])
     .index('by_trip_and_created_at', ['tripId', 'createdAt'])
-    .index('by_trip_and_direction', ['tripId', 'direction']),
+    .index('by_trip_and_direction', ['tripId', 'direction'])
+    .index('by_requirement', ['requirementId']),
+  tripDocumentRequirements: defineTable({
+    companyId: v.id('companies'),
+    tripId: v.id('trips'),
+    direction: documentDirectionValidator,
+    documentType: documentTypeValidator,
+    displayName: v.string(),
+    required: v.boolean(),
+    status: documentRequirementStatusValidator,
+    dueAt: v.optional(v.number()),
+    latestDocumentId: v.optional(v.id('tripDocuments')),
+    satisfiedByDocumentId: v.optional(v.id('tripDocuments')),
+    waivedByUserId: v.optional(v.id('users')),
+    waivedAt: v.optional(v.number()),
+    waiverReason: v.optional(v.string()),
+    createdByUserId: v.optional(v.id('users')),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_trip', ['tripId'])
+    .index('by_company', ['companyId'])
+    .index('by_trip_and_direction', ['tripId', 'direction'])
+    .index('by_trip_and_status', ['tripId', 'status']),
+  tripDocumentReviewEvents: defineTable({
+    companyId: v.id('companies'),
+    tripId: v.id('trips'),
+    requirementId: v.optional(v.id('tripDocumentRequirements')),
+    documentId: v.optional(v.id('tripDocuments')),
+    actorUserId: v.optional(v.id('users')),
+    actorRole: userRoleValidator,
+    eventType: documentReviewEventTypeValidator,
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index('by_company', ['companyId'])
+    .index('by_trip', ['tripId'])
+    .index('by_trip_and_created_at', ['tripId', 'createdAt'])
+    .index('by_requirement', ['requirementId'])
+    .index('by_document', ['documentId']),
   tripEvents: defineTable({
     companyId: v.id('companies'),
     tripId: v.id('trips'),

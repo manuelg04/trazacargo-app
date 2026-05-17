@@ -14,12 +14,15 @@ type DocumentType = Doc<'tripDocuments'>['documentType'];
 
 export const companyDocumentTypes = ['MANIFEST', 'REMITTANCE', 'ADVANCE', 'LOADING_ORDER', 'OTHER'] as const;
 export const driverDocumentTypes = ['DELIVERY_TICKET', 'PAYMENT_ACCOUNT', 'SUPPORT_PHOTO', 'FULFILLMENT', 'OTHER'] as const;
+export const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const;
+export const maxDocumentSizeBytes = 10 * 1024 * 1024;
 
 export const tripDocumentWithUrlReturn = v.object({
   _id: v.id('tripDocuments'),
   _creationTime: v.number(),
   companyId: v.id('companies'),
   tripId: v.id('trips'),
+  requirementId: v.optional(v.id('tripDocumentRequirements')),
   documentType: documentTypeValidator,
   direction: documentDirectionValidator,
   displayName: v.string(),
@@ -68,6 +71,22 @@ export function assertRequiredText(value: string, message: string) {
   }
 
   return normalizedValue;
+}
+
+export function assertAllowedFileMetadata(mimeType: string | undefined, sizeBytes: number | undefined) {
+  if (sizeBytes !== undefined && sizeBytes > maxDocumentSizeBytes) {
+    throw new ConvexError('El archivo no puede superar 10 MB.');
+  }
+
+  const normalizedMimeType = mimeType?.trim();
+
+  if (!normalizedMimeType) {
+    return;
+  }
+
+  if (!allowedMimeTypes.some((allowedMimeType) => allowedMimeType === normalizedMimeType)) {
+    throw new ConvexError('Solo puedes subir PDF, JPG, PNG o WEBP.');
+  }
 }
 
 export async function listTripDocumentsWithUrls(ctx: DocumentCtx, tripId: Doc<'trips'>['_id']) {

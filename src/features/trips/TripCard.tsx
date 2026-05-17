@@ -3,6 +3,8 @@ import { Id } from '@/convex/_generated/dataModel';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { DocumentSummaryBadge } from '@/src/features/documents/DocumentSummaryBadge';
+import { DocumentSummary } from '@/src/features/documents/documentRequirementTypes';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { formatCurrency } from '@/src/utils/formatCurrency';
 import { formatDate } from '@/src/utils/formatDate';
@@ -16,6 +18,7 @@ type TripCardTrip = {
   advanceValue?: number;
   cargoDescription: string;
   status: string;
+  documentSummary?: DocumentSummary;
 };
 
 type TripCardProps = {
@@ -45,6 +48,12 @@ export function TripCard({ trip, onView, onAccept, accepting = false }: TripCard
         {trip.freightValue ? <Text style={styles.metaItem}>💵 {formatCurrency(trip.freightValue)}</Text> : null}
         {trip.advanceValue ? <Text style={styles.metaItem}>Anticipo: {formatCurrency(trip.advanceValue)}</Text> : null}
       </View>
+
+      {trip.documentSummary ? (
+        <View style={styles.summary}>
+          <DocumentSummaryBadge summary={trip.documentSummary} tripStatus={trip.status} />
+        </View>
+      ) : null}
 
       <View style={styles.actions}>
         <AppButton label="Ver detalle" variant="secondary" onPress={() => onView(trip._id)} fullWidth />
@@ -93,5 +102,8 @@ const styles = StyleSheet.create({
   actions: {
     gap: spacing[2],
     marginTop: spacing[4],
+  },
+  summary: {
+    marginTop: spacing[3],
   },
 });

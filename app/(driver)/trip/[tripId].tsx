@@ -14,6 +14,10 @@ import { AppScreen } from '@/src/components/AppScreen';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { operationalEventActions, TripEventType } from '@/src/constants/tripEvents';
 import { DocumentCard, TripDocumentView } from '@/src/features/documents/DocumentCard';
+import { DocumentRequirementList } from '@/src/features/documents/DocumentRequirementList';
+import { DocumentReviewHistory, DocumentReviewEventView } from '@/src/features/documents/DocumentReviewHistory';
+import { DocumentSummaryPanel } from '@/src/features/documents/DocumentSummaryPanel';
+import { DocumentRequirementView } from '@/src/features/documents/documentRequirementTypes';
 import { DriverDocumentUploadPanel } from '@/src/features/documents/DriverDocumentUploadPanel';
 import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
@@ -41,6 +45,10 @@ export default function TripDetailScreen() {
   const resolvedTripId = tripId as Id<'trips'> | undefined;
   const detail = useQuery(
     api.trips.getDetailForCurrentDriver,
+    resolvedTripId ? { tripId: resolvedTripId } : 'skip',
+  );
+  const reviewEvents = useQuery(
+    api.tripDocumentReviewEvents.listReviewEventsByTripForCurrentDriver,
     resolvedTripId ? { tripId: resolvedTripId } : 'skip',
   );
 
@@ -99,8 +107,11 @@ export default function TripDetailScreen() {
   }
 
   const documents = detail.documents as TripDocumentView[];
+  const requirements = detail.documentRequirements as DocumentRequirementView[];
   const companyDocuments = documents.filter((document) => document.direction === 'COMPANY_TO_DRIVER');
   const driverDocuments = documents.filter((document) => document.direction === 'DRIVER_TO_COMPANY');
+  const companyRequirements = requirements.filter((requirement) => requirement.direction === 'COMPANY_TO_DRIVER');
+  const driverRequirements = requirements.filter((requirement) => requirement.direction === 'DRIVER_TO_COMPANY');
   const routeTitle = `${detail.trip.originCity} → ${detail.trip.destinationCity}`;
 
   return (
@@ -210,7 +221,23 @@ export default function TripDetailScreen() {
         {activeTab === 'docs' ? (
           <View style={styles.tabContent}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Documentos de la empresa</Text>
+              <Text style={styles.sectionTitle}>Checklist documental</Text>
+              <DocumentSummaryPanel summary={detail.documentSummary} />
+            </View>
+            <DocumentRequirementList
+              title="Documentos de la empresa"
+              requirements={companyRequirements}
+              actor="driver"
+              emptyText="La empresa todavía no ha definido documentos para este viaje."
+            />
+            <DocumentRequirementList
+              title="Documentos que debo enviar"
+              requirements={driverRequirements}
+              actor="driver"
+              emptyText="No tienes documentos requeridos para enviar."
+            />
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Archivos de la empresa</Text>
               {companyDocuments.length === 0 ? (
                 <Text style={styles.emptyText}>Este viaje no tiene documentos de la empresa todavía.</Text>
               ) : (
@@ -223,7 +250,7 @@ export default function TripDetailScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Mis documentos enviados</Text>
+              <Text style={styles.sectionTitle}>Mis archivos enviados</Text>
               {driverDocuments.length === 0 ? (
                 <Text style={styles.emptyText}>Todavía no has enviado documentos.</Text>
               ) : (
@@ -238,6 +265,11 @@ export default function TripDetailScreen() {
             {detail.access.belongsToDriver ? (
               <DriverDocumentUploadPanel tripId={resolvedTripId} documents={driverDocuments} />
             ) : null}
+            {reviewEvents === undefined ? (
+              <AppLoading message="Cargando historial" />
+            ) : (
+              <DocumentReviewHistory events={reviewEvents as DocumentReviewEventView[]} limit={10} />
+            )}
           </View>
         ) : null}
 

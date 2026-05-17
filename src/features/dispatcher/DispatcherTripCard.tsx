@@ -3,6 +3,8 @@ import { Id } from '@/convex/_generated/dataModel';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { DocumentSummaryBadge } from '@/src/features/documents/DocumentSummaryBadge';
+import { DocumentSummary } from '@/src/features/documents/documentRequirementTypes';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { formatCurrency } from '@/src/utils/formatCurrency';
 import { formatDate } from '@/src/utils/formatDate';
@@ -20,6 +22,7 @@ type DispatcherTripCardTrip = {
   assignedDriver: { fullName: string } | null;
   offerCount: number;
   pendingOfferCount: number;
+  documentSummary?: DocumentSummary;
 };
 
 type DispatcherTripCardProps = {
@@ -54,6 +57,12 @@ export function DispatcherTripCard({ trip, onView }: DispatcherTripCardProps) {
           </Text>
         ) : null}
       </View>
+
+      {trip.documentSummary ? (
+        <View style={styles.summary}>
+          <DocumentSummaryBadge summary={trip.documentSummary} tripStatus={trip.status} />
+        </View>
+      ) : null}
 
       <AppButton label="Ver detalle" variant="secondary" onPress={() => onView(trip._id)} fullWidth style={styles.action} />
     </AppCard>
@@ -96,5 +105,8 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: spacing[4],
+  },
+  summary: {
+    marginTop: spacing[3],
   },
 });

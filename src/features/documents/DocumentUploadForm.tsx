@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Id } from '@/convex/_generated/dataModel';
 import { AppButton } from '@/src/components/AppButton';
@@ -28,6 +28,10 @@ type DocumentUploadFormProps = {
   availableDocumentTypes: DocumentTypeOption[];
   onUploaded?: () => void;
   parentDocumentResolver?: (documentType: DocumentType) => Id<'tripDocuments'> | undefined;
+  requirementId?: Id<'tripDocumentRequirements'>;
+  fixedDocumentType?: DocumentType;
+  defaultDisplayName?: string;
+  submitLabel?: string;
 };
 
 export function DocumentUploadForm({
@@ -36,12 +40,24 @@ export function DocumentUploadForm({
   availableDocumentTypes,
   onUploaded,
   parentDocumentResolver,
+  requirementId,
+  fixedDocumentType,
+  defaultDisplayName,
+  submitLabel = 'Subir documento',
 }: DocumentUploadFormProps) {
-  const [selectedDocumentType, setSelectedDocumentType] = useState<DocumentType | undefined>();
-  const [displayName, setDisplayName] = useState('');
+  const [selectedDocumentType, setSelectedDocumentType] = useState<DocumentType | undefined>(fixedDocumentType);
+  const [displayName, setDisplayName] = useState(defaultDisplayName ?? '');
   const [selectedFile, setSelectedFile] = useState<UploadableFile | undefined>();
   const [localError, setLocalError] = useState<string | undefined>();
   const { uploadDocument, uploading, error, clearError } = useUploadDocument({ tripId, direction });
+
+  useEffect(() => {
+    setSelectedDocumentType(fixedDocumentType);
+    setDisplayName(defaultDisplayName ?? '');
+    setSelectedFile(undefined);
+    setLocalError(undefined);
+    clearError();
+  }, [clearError, defaultDisplayName, fixedDocumentType, requirementId]);
 
   const handlePickDocument = async () => {
     setLocalError(undefined);
@@ -59,13 +75,21 @@ export function DocumentUploadForm({
 
     const asset = result.assets[0];
 
-    setSelectedFile({
+    const pickedFile = {
       uri: asset.uri,
       name: asset.name,
       mimeType: asset.mimeType,
       sizeBytes: asset.size,
       file: asset.file,
-    });
+    };
+    const validationError = getFileValidationError(pickedFile);
+
+    if (validationError) {
+      setLocalError(validationError);
+      return;
+    }
+
+    setSelectedFile(pickedFile);
   };
 
   const handleTakePhoto = async () => {
@@ -92,13 +116,21 @@ export function DocumentUploadForm({
     const asset = result.assets[0];
     const name = asset.fileName ?? `foto-${Date.now()}.jpg`;
 
-    setSelectedFile({
+    const pickedFile = {
       uri: asset.uri,
       name,
       mimeType: asset.mimeType ?? 'image/jpeg',
       sizeBytes: asset.fileSize,
       file: asset.file,
-    });
+    };
+    const validationError = getFileValidationError(pickedFile);
+
+    if (validationError) {
+      setLocalError(validationError);
+      return;
+    }
+
+    setSelectedFile(pickedFile);
   };
 
   const handleSubmit = async () => {
@@ -121,9 +153,10 @@ export function DocumentUploadForm({
         displayName,
         file: selectedFile,
         parentDocumentId: parentDocumentResolver?.(selectedDocumentType),
+        requirementId,
       });
-      setSelectedDocumentType(undefined);
-      setDisplayName('');
+      setSelectedDocumentType(fixedDocumentType);
+      setDisplayName(defaultDisplayName ?? '');
       setSelectedFile(undefined);
       onUploaded?.();
     } catch (submitError) {
@@ -139,25 +172,27 @@ export function DocumentUploadForm({
 
   return (
     <View style={styles.container}>
-      <View style={styles.typeGrid}>
-        {availableDocumentTypes.map((option) => {
-          const selected = selectedDocumentType === option.value;
+      {fixedDocumentType ? null : (
+        <View style={styles.typeGrid}>
+          {availableDocumentTypes.map((option) => {
+            const selected = selectedDocumentType === option.value;
 
-          return (
-            <Pressable
-              key={option.value}
-              accessibilityRole="button"
-              onPress={() => setSelectedDocumentType(option.value)}
-              style={({ pressed }) => [
-                styles.typeButton,
-                selected ? styles.typeButtonSelected : null,
-                pressed ? styles.typeButtonPressed : null,
-              ]}>
-              <Text style={[styles.typeButtonText, selected ? styles.typeButtonTextSelected : null]}>{option.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+            return (
+              <Pressable
+                key={option.value}
+                accessibilityRole="button"
+                onPress={() => setSelectedDocumentType(option.value)}
+                style={({ pressed }) => [
+                  styles.typeButton,
+                  selected ? styles.typeButtonSelected : null,
+                  pressed ? styles.typeButtonPressed : null,
+                ]}>
+                <Text style={[styles.typeButtonText, selected ? styles.typeButtonTextSelected : null]}>{option.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <AppInput
         label="Nombre visible"
@@ -177,9 +212,27 @@ export function DocumentUploadForm({
       </View>
 
       {visibleError ? <Text style={styles.error}>{visibleError}</Text> : null}
-      <AppButton title="Subir documento" onPress={handleSubmit} loading={uploading} />
+      <AppButton title={submitLabel} onPress={handleSubmit} loading={uploading} />
     </View>
   );
+}
+
+function getFileValidationError(file: UploadableFile) {
+  if (file.sizeBytes !== undefined && file.sizeBytes > 10 * 1024 * 1024) {
+    return 'El archivo no puede superar 10 MB.';
+  }
+
+  const mimeType = file.mimeType?.trim();
+
+  if (!mimeType) {
+    return undefined;
+  }
+
+  if (mimeType === 'application/pdf' || mimeType === 'image/jpeg' || mimeType === 'image/png' || mimeType === 'image/webp') {
+    return undefined;
+  }
+
+  return 'Solo puedes subir PDF, JPG, PNG o WEBP.';
 }
 
 const styles = StyleSheet.create({
