@@ -11,6 +11,7 @@
 import type * as accessCodes from "../accessCodes.js";
 import type * as auth from "../auth.js";
 import type * as companies from "../companies.js";
+import type * as companyDocumentRequirementTemplates from "../companyDocumentRequirementTemplates.js";
 import type * as dev from "../dev.js";
 import type * as drivers from "../drivers.js";
 import type * as http from "../http.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   accessCodes: typeof accessCodes;
   auth: typeof auth;
   companies: typeof companies;
+  companyDocumentRequirementTemplates: typeof companyDocumentRequirementTemplates;
   dev: typeof dev;
   drivers: typeof drivers;
   http: typeof http;

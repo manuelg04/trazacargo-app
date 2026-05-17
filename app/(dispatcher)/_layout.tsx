@@ -48,6 +48,7 @@ export default function DispatcherLayout() {
       <Tabs.Screen name="trips" options={{ tabBarLabel: 'Viajes' }} />
       <Tabs.Screen name="drivers" options={{ tabBarLabel: 'Conductores' }} />
       <Tabs.Screen name="access-codes" options={{ tabBarLabel: 'Accesos' }} />
+      <Tabs.Screen name="settings" options={{ tabBarLabel: 'Config.' }} />
       <Tabs.Screen name="account" options={{ tabBarLabel: 'Cuenta' }} />
       <Tabs.Screen name="create-trip" options={{ href: null }} />
       <Tabs.Screen name="trip/[tripId]" options={{ href: null }} />

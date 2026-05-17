@@ -1,5 +1,5 @@
 import { ConvexError, v } from 'convex/values';
-import { mutation, query } from './_generated/server';
+import { MutationCtx, mutation, query } from './_generated/server';
 import { companyStatusValidator, driverStatusValidator, vehicleStatusValidator } from './schema';
 import { Doc } from './_generated/dataModel';
 import { requireDispatcherOrAdminProfile } from './lib/permissions';
@@ -176,3 +176,107 @@ export const createForCurrentCompany = mutation({
     return { driver, vehicle };
   },
 });
+
+export const updateStatusForCurrentCompany = mutation({
+  args: {
+    driverId: v.id('drivers'),
+    status: v.union(v.literal('ACTIVE'), v.literal('DISABLED')),
+  },
+  returns: driverReturn,
+  handler: async (ctx, args) => {
+    const { profile } = await requireDispatcherOrAdminProfile(ctx);
+    const driver = await getDriverForCurrentCompany(ctx, args.driverId, profile.companyId);
+
+    if (driver.status !== args.status) {
+      await ctx.db.patch(driver._id, {
+        status: args.status,
+        updatedAt: Date.now(),
+      });
+    }
+
+    const updatedDriver = await ctx.db.get(driver._id);
+
+    if (!updatedDriver) {
+      throw new ConvexError('No se pudo actualizar el conductor.');
+    }
+
+    return updatedDriver;
+  },
+});
+
+export const updateDriverForCurrentCompany = mutation({
+  args: {
+    driverId: v.id('drivers'),
+    fullName: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    documentNumber: v.optional(v.string()),
+  },
+  returns: driverReturn,
+  handler: async (ctx, args) => {
+    const { profile } = await requireDispatcherOrAdminProfile(ctx);
+    const driver = await getDriverForCurrentCompany(ctx, args.driverId, profile.companyId);
+    const fullName = normalizeOptionalDriverText(args.fullName, 'Ingresa el nombre del conductor.');
+    const phone = normalizeOptionalDriverText(args.phone, 'Ingresa el teléfono del conductor.');
+    const documentNumber = normalizeOptionalDriverText(args.documentNumber, 'Ingresa el documento del conductor.');
+
+    if (documentNumber && documentNumber !== driver.documentNumber) {
+      const drivers = await ctx.db
+        .query('drivers')
+        .withIndex('by_company', (q) => q.eq('companyId', profile.companyId))
+        .collect();
+      const duplicateDriver = drivers.find(
+        (candidate) => candidate._id !== driver._id && candidate.documentNumber === documentNumber,
+      );
+
+      if (duplicateDriver) {
+        throw new ConvexError('Ya existe un conductor con ese documento.');
+      }
+    }
+
+    await ctx.db.patch(driver._id, {
+      fullName: fullName ?? driver.fullName,
+      phone: phone ?? driver.phone,
+      documentNumber: documentNumber ?? driver.documentNumber,
+      updatedAt: Date.now(),
+    });
+    const updatedDriver = await ctx.db.get(driver._id);
+
+    if (!updatedDriver) {
+      throw new ConvexError('No se pudo actualizar el conductor.');
+    }
+
+    return updatedDriver;
+  },
+});
+
+async function getDriverForCurrentCompany(
+  ctx: MutationCtx,
+  driverId: Doc<'drivers'>['_id'],
+  companyId: Doc<'drivers'>['companyId'],
+) {
+  const driver = await ctx.db.get(driverId);
+
+  if (!driver) {
+    throw new ConvexError('El conductor no existe.');
+  }
+
+  if (driver.companyId !== companyId) {
+    throw new ConvexError('No tienes acceso a este conductor.');
+  }
+
+  return driver;
+}
+
+function normalizeOptionalDriverText(value: string | undefined, message: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    throw new ConvexError(message);
+  }
+
+  return normalizedValue;
+}

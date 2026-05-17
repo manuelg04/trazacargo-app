@@ -12,10 +12,13 @@ import { AppInput } from '@/src/components/AppInput';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { DriverCard } from '@/src/features/dispatcher/DriverCard';
+import { getActionErrorMessage } from '@/src/utils/getActionErrorMessage';
 
 export default function DispatcherDriversScreen() {
   const drivers = useQuery(api.drivers.listForCurrentCompany, {});
   const createDriver = useMutation(api.drivers.createForCurrentCompany);
+  const updateDriver = useMutation(api.drivers.updateDriverForCurrentCompany);
+  const updateDriverStatus = useMutation(api.drivers.updateStatusForCurrentCompany);
   const createAccessCode = useMutation(api.accessCodes.createDriverAccessCode);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -24,6 +27,8 @@ export default function DispatcherDriversScreen() {
   const [vehicleType, setVehicleType] = useState('');
   const [creating, setCreating] = useState(false);
   const [generatingDriverId, setGeneratingDriverId] = useState<Id<'drivers'> | null>(null);
+  const [updatingDriverId, setUpdatingDriverId] = useState<Id<'drivers'> | null>(null);
+  const [updatingStatusDriverId, setUpdatingStatusDriverId] = useState<Id<'drivers'> | null>(null);
   const [generatedCode, setGeneratedCode] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
 
@@ -49,7 +54,7 @@ export default function DispatcherDriversScreen() {
       setVehiclePlate('');
       setVehicleType('');
     } catch (createError) {
-      setError(getDriverErrorMessage(createError));
+      setError(getActionErrorMessage(createError));
     } finally {
       setCreating(false);
     }
@@ -64,9 +69,42 @@ export default function DispatcherDriversScreen() {
       const accessCode = await createAccessCode({ driverId });
       setGeneratedCode(accessCode.code);
     } catch (createError) {
-      setError(getDriverErrorMessage(createError));
+      setError(getActionErrorMessage(createError));
     } finally {
       setGeneratingDriverId(null);
+    }
+  };
+
+  const handleUpdateDriver = async (
+    driverId: Id<'drivers'>,
+    input: {
+      fullName: string;
+      phone: string;
+      documentNumber: string;
+    },
+  ) => {
+    setUpdatingDriverId(driverId);
+    setError(undefined);
+
+    try {
+      await updateDriver({ driverId, ...input });
+    } catch (updateError) {
+      setError(getActionErrorMessage(updateError));
+    } finally {
+      setUpdatingDriverId(null);
+    }
+  };
+
+  const handleUpdateStatus = async (driverId: Id<'drivers'>, status: 'ACTIVE' | 'DISABLED') => {
+    setUpdatingStatusDriverId(driverId);
+    setError(undefined);
+
+    try {
+      await updateDriverStatus({ driverId, status });
+    } catch (updateError) {
+      setError(getActionErrorMessage(updateError));
+    } finally {
+      setUpdatingStatusDriverId(null);
     }
   };
 
@@ -111,7 +149,11 @@ export default function DispatcherDriversScreen() {
               <DriverCard
                 driver={item}
                 onGenerateAccessCode={handleGenerateAccessCode}
+                onUpdateDriver={handleUpdateDriver}
+                onUpdateStatus={handleUpdateStatus}
                 generating={generatingDriverId === item._id}
+                updating={updatingDriverId === item._id}
+                updatingStatus={updatingStatusDriverId === item._id}
               />
             )}
             scrollEnabled={false}
@@ -121,16 +163,6 @@ export default function DispatcherDriversScreen() {
       </AppScreen>
     </View>
   );
-}
-
-function getDriverErrorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : '';
-
-  if (message) {
-    return message;
-  }
-
-  return 'No se pudo completar la acción.';
 }
 
 const styles = StyleSheet.create({

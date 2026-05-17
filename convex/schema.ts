@@ -4,7 +4,7 @@ import { authTables } from '@convex-dev/auth/server';
 
 export const companyStatusValidator = v.union(v.literal('ACTIVE'), v.literal('INACTIVE'));
 
-export const driverStatusValidator = v.union(v.literal('ACTIVE'), v.literal('INACTIVE'));
+export const driverStatusValidator = v.union(v.literal('ACTIVE'), v.literal('DISABLED'), v.literal('INACTIVE'));
 
 export const vehicleStatusValidator = v.union(v.literal('ACTIVE'), v.literal('INACTIVE'));
 
@@ -64,6 +64,11 @@ export const documentRequirementStatusValidator = v.union(
   v.literal('SATISFIED'),
   v.literal('REJECTED'),
   v.literal('WAIVED'),
+);
+
+export const companyDocumentRequirementTemplateStatusValidator = v.union(
+  v.literal('ACTIVE'),
+  v.literal('DISABLED'),
 );
 
 export const uploadedByTypeValidator = v.union(
@@ -229,6 +234,22 @@ export default defineSchema({
     .index('by_company', ['companyId'])
     .index('by_trip_and_direction', ['tripId', 'direction'])
     .index('by_trip_and_status', ['tripId', 'status']),
+  companyDocumentRequirementTemplates: defineTable({
+    companyId: v.id('companies'),
+    direction: documentDirectionValidator,
+    documentType: documentTypeValidator,
+    displayName: v.string(),
+    required: v.boolean(),
+    defaultDueOffsetHours: v.optional(v.number()),
+    status: companyDocumentRequirementTemplateStatusValidator,
+    sortOrder: v.optional(v.number()),
+    createdByUserId: v.optional(v.id('users')),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_company', ['companyId'])
+    .index('by_company_and_status', ['companyId', 'status'])
+    .index('by_company_direction_and_status', ['companyId', 'direction', 'status']),
   tripDocumentReviewEvents: defineTable({
     companyId: v.id('companies'),
     tripId: v.id('trips'),

@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint app src \"convex/**/*.ts\"",
     "test": "vitest",
-    "test:once": "vitest run"
+    "test:once": "vitest run",
+    "build:android:preview": "npx eas-cli build --platform android --profile preview",
+    "build:ios:preview": "npx eas-cli build --platform ios --profile preview",
+    "build:all:preview": "npx eas-cli build --platform all --profile preview"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",

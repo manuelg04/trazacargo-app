@@ -10,6 +10,7 @@ type TripOfferPanelDriver = {
   _id: Id<'drivers'>;
   fullName: string;
   documentNumber: string;
+  status?: string;
   vehicle: {
     plate: string;
     vehicleType: string;
@@ -43,12 +44,13 @@ export function TripOfferPanel({
   onOffer,
 }: TripOfferPanelProps) {
   const offeredDriverIds = offers.map((offer) => offer.driverId);
+  const offerableDrivers = drivers.filter((driver) => !driver.status || driver.status === 'ACTIVE');
 
   return (
     <AppCard>
       <Text style={styles.title}>Ofertar viaje</Text>
       <DriverPicker
-        drivers={drivers}
+        drivers={offerableDrivers}
         selectedDriverIds={selectedDriverIds}
         offeredDriverIds={offeredDriverIds}
         onChange={onChangeSelectedDrivers}
