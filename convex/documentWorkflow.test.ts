@@ -321,10 +321,14 @@ describe('document workflow rules', () => {
       pickupAt: '2026-05-18',
       deliveryEta: '2026-05-20',
       cargoDescription: 'Carga seca',
+      freightValue: 3200000,
+      advanceValue: 800000,
     });
 
     const requirements = await listRequirements(t, trip._id);
 
+    expect(trip.freightValue).toBe(3200000);
+    expect(trip.advanceValue).toBe(800000);
     expect(requirements).toHaveLength(6);
     expect(requirements.map((requirement) => [requirement.documentType, requirement.required])).toEqual([
       ['MANIFEST', true],

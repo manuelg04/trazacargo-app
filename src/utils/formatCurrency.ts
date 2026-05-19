@@ -1,13 +1,5 @@
-const currencyFormatter = new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: 'COP',
-  maximumFractionDigits: 0,
-});
+import { formatCurrencyDisplay } from './moneyInput';
 
 export function formatCurrency(value?: number) {
-  if (value === undefined) {
-    return 'No informado';
-  }
-
-  return currencyFormatter.format(value);
+  return formatCurrencyDisplay(value);
 }

@@ -6,6 +6,7 @@ import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 
 type DocumentRequirementListProps = {
   title: string;
+  description?: string;
   requirements: DocumentRequirementView[];
   actor: 'driver' | 'dispatcher';
   emptyText: string;
@@ -17,6 +18,7 @@ type DocumentRequirementListProps = {
 
 export function DocumentRequirementList({
   title,
+  description,
   requirements,
   actor,
   emptyText,
@@ -28,6 +30,7 @@ export function DocumentRequirementList({
   return (
     <View style={styles.section}>
       <Text style={styles.title}>{title}</Text>
+      {description ? <Text style={styles.description}>{description}</Text> : null}
       {requirements.length === 0 ? <Text style={styles.emptyText}>{emptyText}</Text> : null}
       {requirements.map((requirement) => (
         <DocumentRequirementCard
@@ -52,6 +55,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontFamily: fontFamily.bold,
     fontSize: fontSize.base,
+  },
+  description: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
   emptyText: {
     color: colors.textSecondary,

@@ -17,19 +17,19 @@ Promesa del producto:
 - Convex Storage
 - npm
 
-## Qué incluye la fase 7
+## Qué incluye la fase 8
 
-- Plantillas documentales por empresa
-- Copia automática de plantillas activas al checklist de cada viaje nuevo
-- Fallback a requisitos documentales base cuando una empresa no tiene plantillas activas
-- Pantalla `Configuración` para ver la empresa y gestionar plantillas
-- Creación, edición y desactivación de plantillas documentales
-- Conductores editables desde la consola
-- Desactivación y reactivación simple de conductores
-- Bloqueo para no ofertar viajes nuevos a conductores desactivados
-- Preparación básica para builds internas con EAS
-- Checklist de piloto en `docs/pilot-checklist.md`
-- Pruebas automatizadas para plantillas, aislamiento entre empresas y ofertas a conductores
+- Inputs monetarios con puntos de miles en creación de viajes
+- Envío de valores monetarios al backend como números limpios
+- Selector de fecha y hora de cargue compatible con Expo Go
+- Fallback web para fecha y hora usando campos controlados
+- Sección documental reorganizada en el detalle dispatcher/admin
+- Sección documental reorganizada en el detalle conductor
+- Cierre de viaje visible junto al resumen documental
+- Subida libre movida a una acción secundaria para evitar duplicar el checklist
+- Revisión de documentos del conductor dentro del requisito cuando aplica
+- Diagnóstico documental en `docs/document-ux-audit.md`
+- Pruebas unitarias para helpers de dinero y fecha/hora
 
 ## Instalar
 
@@ -124,6 +124,41 @@ Si una empresa no tiene plantillas activas, TrazaCargo usa los requisitos base:
 - Cuenta de cobro
 - Cumplido
 
+## Probar inputs monetarios
+
+1. Entra como dispatcher/admin.
+2. Abre `Crear viaje`.
+3. Escribe `3200000` en `Valor flete`.
+4. Confirma que el campo muestra `3.200.000`.
+5. Escribe `800000` en `Anticipo`.
+6. Confirma que el campo muestra `800.000`.
+7. Crea el viaje.
+8. Abre el detalle y confirma que el flete aparece como `$ 3.200.000` y el anticipo como `$ 800.000`.
+
+## Probar fecha y hora de cargue
+
+1. Entra como dispatcher/admin.
+2. Abre `Crear viaje`.
+3. En iOS o Android, usa `Seleccionar fecha` y `Seleccionar hora`.
+4. En web, usa los campos `YYYY-MM-DD` y `HH:mm`.
+5. Crea el viaje.
+6. Abre el detalle y confirma que la fecha de cargue muestra fecha y hora en español.
+
+## Probar nueva UX documental
+
+1. Entra al detalle de un viaje como dispatcher/admin.
+2. Abre `Documentos`.
+3. Confirma que aparece `Documentos y cierre`.
+4. Confirma que el resumen documental está arriba.
+5. Confirma que `Cerrar viaje` aparece cerca del resumen y se bloquea si faltan documentos.
+6. Revisa los grupos `Documentos para el conductor`, `Documentos recibidos del conductor`, `Otros documentos` e `Historial documental`.
+7. Confirma que `Subir otro documento de empresa` está como acción secundaria.
+8. Entra como conductor.
+9. Abre el detalle del viaje y entra a `Documentos`.
+10. Confirma que aparecen `Documentos de la empresa`, `Documentos que debo enviar`, `Otros documentos` e `Historial documental`.
+11. Sube o reenvía documentos desde el requisito correspondiente.
+12. Vuelve como dispatcher/admin y aprueba o rechaza desde el documento en revisión.
+
 ## Administrar conductores
 
 1. Entra como dispatcher/admin.
@@ -161,6 +196,9 @@ npm run test
 
 Las pruebas cubren:
 
+- Formato de inputs monetarios
+- Parseo de valores monetarios limpios
+- Combinación y formato de fecha/hora de cargue
 - Requisitos por defecto al crear viajes
 - Plantillas documentales copiadas a viajes nuevos
 - Fallback base cuando no hay plantillas activas
@@ -242,6 +280,7 @@ Para ejecutar builds necesitas una cuenta Expo/EAS. iOS puede requerir Apple Dev
 - Comentarios
 - Analítica avanzada
 - Soporte offline
+- Rediseño visual global
 - Producción hardening final
 - App store submission
 - CI/CD complejo
@@ -258,9 +297,11 @@ Para ejecutar builds necesitas una cuenta Expo/EAS. iOS puede requerir Apple Dev
 - Los documentos demo sembrados no tienen `storageId`, por eso aparecen como documento demo sin archivo.
 - La subida usa un archivo por acción, sin multiarchivo por lote.
 - La cámara y el selector dependen de permisos y comportamiento de Expo Go en cada plataforma.
+- El picker nativo de fecha/hora aplica a iOS y Android; web usa fallback controlado.
+- No se cambia el flujo RNDC, pagos, OCR, GPS, push notifications ni offline.
 - La validación de tipo de archivo usa metadata de la plataforma, no inspección binaria.
 - EAS queda configurado, pero los builds internos requieren login y configuración de cuenta.
 
-## Fase 8 sugerida
+## Próxima fase sugerida
 
-Preparar el piloto operativo con endurecimiento controlado: roles de soporte, auditoría de acciones críticas, guías de onboarding para la empresa piloto, manejo más claro de archivos pesados, revisión de errores reales del piloto y mejoras pequeñas basadas en uso observado.
+La siguiente fase recomendada es eventos operativos con ubicación opcional capturada por acción del conductor, sin tracking en vivo todavía.

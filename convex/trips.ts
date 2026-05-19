@@ -580,8 +580,8 @@ export const createForDispatcher = mutation({
     pickupAt: v.string(),
     deliveryEta: v.optional(v.string()),
     cargoDescription: v.string(),
-    freightValue: v.optional(v.string()),
-    advanceValue: v.optional(v.string()),
+    freightValue: v.optional(v.number()),
+    advanceValue: v.optional(v.number()),
     observations: v.optional(v.string()),
   },
   returns: v.object(tripFields),
@@ -830,24 +830,16 @@ function parseOptionalDate(value: string | undefined, message: string) {
   return parseRequiredDate(value, message);
 }
 
-function parseOptionalMoney(value: string | undefined, message: string) {
-  if (!value?.trim()) {
+function parseOptionalMoney(value: number | undefined, message: string) {
+  if (value === undefined) {
     return undefined;
   }
 
-  const normalizedValue = value.replace(/[^\d]/g, '');
-
-  if (!normalizedValue) {
+  if (!Number.isFinite(value) || value < 0) {
     throw new ConvexError(message);
   }
 
-  const parsedValue = Number(normalizedValue);
-
-  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
-    throw new ConvexError(message);
-  }
-
-  return parsedValue;
+  return value;
 }
 
 function matchesDocumentState(

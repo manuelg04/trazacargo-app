@@ -12,14 +12,10 @@ import { AppErrorState } from '@/src/components/AppErrorState';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { StatusBadge } from '@/src/components/StatusBadge';
-import { CompanyDocumentUploadPanel } from '@/src/features/documents/CompanyDocumentUploadPanel';
-import { DocumentCard, TripDocumentView } from '@/src/features/documents/DocumentCard';
-import { DocumentRequirementForm } from '@/src/features/documents/DocumentRequirementForm';
-import { DocumentRequirementList } from '@/src/features/documents/DocumentRequirementList';
-import { DocumentReviewHistory, DocumentReviewEventView } from '@/src/features/documents/DocumentReviewHistory';
-import { DocumentSummaryPanel } from '@/src/features/documents/DocumentSummaryPanel';
+import { TripDocumentView } from '@/src/features/documents/DocumentCard';
+import { DocumentReviewEventView } from '@/src/features/documents/DocumentReviewHistory';
 import { DocumentRequirementView } from '@/src/features/documents/documentRequirementTypes';
-import { DocumentReviewPanel } from '@/src/features/documents/DocumentReviewPanel';
+import { DispatcherTripDocumentsSection } from '@/src/features/documents/DispatcherTripDocumentsSection';
 import { TripOfferPanel } from '@/src/features/dispatcher/TripOfferPanel';
 import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { TripHeader } from '@/src/features/trips/TripHeader';
@@ -317,76 +313,23 @@ export default function DispatcherTripDetailScreen() {
         ) : null}
 
         {activeTab === 'docs' ? (
-          <>
-            <Text style={styles.sectionTitle}>Checklist documental</Text>
-            <DocumentSummaryPanel summary={detail.documentSummary} />
-            <DocumentRequirementList
-              title="Documentos de la empresa"
-              requirements={companyRequirements}
-              actor="dispatcher"
-              emptyText="Este viaje no tiene requisitos para documentos de la empresa."
-              onWaive={handleWaiveRequirement}
-              onReactivate={handleReactivateRequirement}
-              onUpdateDueDate={handleUpdateRequirementDueDate}
-            />
-            <DocumentRequirementList
-              title="Documentos del conductor"
-              requirements={driverRequirements}
-              actor="dispatcher"
-              emptyText="Este viaje no tiene requisitos para documentos del conductor."
-              onWaive={handleWaiveRequirement}
-              onReactivate={handleReactivateRequirement}
-              onUpdateDueDate={handleUpdateRequirementDueDate}
-            />
-            <DocumentRequirementForm tripId={resolvedTripId} />
-            {canCloseTrip ? (
-              <AppCard style={styles.closeCard}>
-                <Text style={styles.sectionTitle}>Cierre operativo</Text>
-                {confirmClose ? (
-                  <Text style={styles.confirmText}>Confirma el cierre del viaje.</Text>
-                ) : null}
-                {!detail.documentSummary.isComplete ? (
-                  <Text style={styles.emptyText}>
-                    No puedes cerrar este viaje porque aún hay documentos requeridos pendientes, en revisión o rechazados.
-                  </Text>
-                ) : (
-                  <Text style={styles.readyText}>Este viaje está listo para cerrar.</Text>
-                )}
-                <AppButton
-                  label={confirmClose ? 'Confirmar cierre' : 'Cerrar viaje'}
-                  variant="success"
-                  fullWidth
-                  loading={closing}
-                  onPress={handleClose}
-                />
-                {confirmClose ? (
-                  <AppButton
-                    label="Mantener viaje abierto"
-                    variant="secondary"
-                    fullWidth
-                    disabled={closing}
-                    onPress={() => setConfirmClose(false)}
-                  />
-                ) : null}
-              </AppCard>
-            ) : null}
-            <Text style={styles.sectionTitle}>Archivos para el conductor</Text>
-            <CompanyDocumentUploadPanel tripId={resolvedTripId} />
-            {companyDocuments.length === 0 ? (
-              <AppCard>
-                <Text style={styles.emptyText}>Este viaje todavía no tiene documentos para el conductor.</Text>
-              </AppCard>
-            ) : (
-              <>
-                {companyDocuments.map((document) => (
-                  <DocumentCard key={document._id} document={document} showDirection={false} />
-                ))}
-              </>
-            )}
-            <Text style={styles.sectionTitle}>Archivos del conductor</Text>
-            <DocumentReviewPanel documents={driverDocuments} />
-            <DocumentReviewHistory events={reviewEvents as DocumentReviewEventView[]} />
-          </>
+          <DispatcherTripDocumentsSection
+            tripId={resolvedTripId}
+            summary={detail.documentSummary}
+            canCloseTrip={canCloseTrip}
+            confirmClose={confirmClose}
+            closing={closing}
+            companyRequirements={companyRequirements}
+            driverRequirements={driverRequirements}
+            companyDocuments={companyDocuments}
+            driverDocuments={driverDocuments}
+            reviewEvents={reviewEvents as DocumentReviewEventView[]}
+            onClose={handleClose}
+            onCancelClose={() => setConfirmClose(false)}
+            onWaiveRequirement={handleWaiveRequirement}
+            onReactivateRequirement={handleReactivateRequirement}
+            onUpdateRequirementDueDate={handleUpdateRequirementDueDate}
+          />
         ) : null}
 
         {activeTab === 'events' ? (
@@ -540,14 +483,6 @@ const styles = StyleSheet.create({
     padding: spacing[4],
   },
   messageText: {
-    color: colors.success,
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-  },
-  closeCard: {
-    gap: spacing[3],
-  },
-  readyText: {
     color: colors.success,
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '@/src/components/AppButton';
 import { AppCard } from '@/src/components/AppCard';
+import { AppDateTimeInput } from '@/src/components/AppDateTimeInput';
 import { AppInput } from '@/src/components/AppInput';
 import { colors, fontFamily, fontSize, radius, spacing } from '@/constants/theme';
+import { formatMoneyInput, parseMoneyInputToNumber } from '@/src/utils/moneyInput';
 
 export type TripFormValues = {
   originCity: string;
@@ -12,8 +14,8 @@ export type TripFormValues = {
   pickupAt: string;
   deliveryEta?: string;
   cargoDescription: string;
-  freightValue?: string;
-  advanceValue?: string;
+  freightValue?: number;
+  advanceValue?: number;
   observations?: string;
 };
 
@@ -26,7 +28,7 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
   const [originCity, setOriginCity] = useState('');
   const [destinationCity, setDestinationCity] = useState('');
   const [routeLabel] = useState('');
-  const [pickupAt, setPickupAt] = useState('');
+  const [pickupAt, setPickupAt] = useState<string | undefined>();
   const [deliveryEta, setDeliveryEta] = useState('');
   const [cargoDescription, setCargoDescription] = useState('');
   const [freightValue, setFreightValue] = useState('');
@@ -39,7 +41,7 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
 
     if (!originCity.trim()) newErrors.originCity = 'Requerido';
     if (!destinationCity.trim()) newErrors.destinationCity = 'Requerido';
-    if (!pickupAt.trim()) newErrors.pickupAt = 'Requerido';
+    if (!pickupAt) newErrors.pickupAt = 'Requerido';
     if (!cargoDescription.trim()) newErrors.cargoDescription = 'Requerido';
 
     if (Object.keys(newErrors).length > 0) {
@@ -49,8 +51,15 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
 
     setErrors({});
     onSubmit({
-      originCity, destinationCity, routeLabel, pickupAt,
-      deliveryEta, cargoDescription, freightValue, advanceValue, observations,
+      originCity,
+      destinationCity,
+      routeLabel,
+      pickupAt: pickupAt ?? '',
+      deliveryEta,
+      cargoDescription,
+      freightValue: parseMoneyInputToNumber(freightValue),
+      advanceValue: parseMoneyInputToNumber(advanceValue),
+      observations,
     });
   };
 
@@ -79,11 +88,10 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
         </View>
         <View style={styles.row}>
           <View style={styles.col}>
-            <AppInput
+            <AppDateTimeInput
               label="Fecha de cargue *"
               value={pickupAt}
-              onChangeText={setPickupAt}
-              placeholder="15 mayo 2026"
+              onChange={setPickupAt}
               error={errors.pickupAt}
             />
           </View>
@@ -109,18 +117,18 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
             <AppInput
               label="Valor flete"
               value={freightValue}
-              onChangeText={setFreightValue}
+              onChangeText={(text) => setFreightValue(formatMoneyInput(text))}
               keyboardType="number-pad"
-              placeholder="💵 3200000"
+              placeholder="3.200.000"
             />
           </View>
           <View style={styles.col}>
             <AppInput
               label="Anticipo"
               value={advanceValue}
-              onChangeText={setAdvanceValue}
+              onChangeText={(text) => setAdvanceValue(formatMoneyInput(text))}
               keyboardType="number-pad"
-              placeholder="800000"
+              placeholder="800.000"
             />
           </View>
         </View>

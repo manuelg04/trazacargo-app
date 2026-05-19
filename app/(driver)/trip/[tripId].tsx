@@ -13,12 +13,10 @@ import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { operationalEventActions, TripEventType } from '@/src/constants/tripEvents';
-import { DocumentCard, TripDocumentView } from '@/src/features/documents/DocumentCard';
-import { DocumentRequirementList } from '@/src/features/documents/DocumentRequirementList';
-import { DocumentReviewHistory, DocumentReviewEventView } from '@/src/features/documents/DocumentReviewHistory';
-import { DocumentSummaryPanel } from '@/src/features/documents/DocumentSummaryPanel';
+import { TripDocumentView } from '@/src/features/documents/DocumentCard';
+import { DocumentReviewEventView } from '@/src/features/documents/DocumentReviewHistory';
 import { DocumentRequirementView } from '@/src/features/documents/documentRequirementTypes';
-import { DriverDocumentUploadPanel } from '@/src/features/documents/DriverDocumentUploadPanel';
+import { DriverTripDocumentsSection } from '@/src/features/documents/DriverTripDocumentsSection';
 import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { formatCurrency } from '@/src/utils/formatCurrency';
@@ -219,58 +217,20 @@ export default function TripDetailScreen() {
         ) : null}
 
         {activeTab === 'docs' ? (
-          <View style={styles.tabContent}>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Checklist documental</Text>
-              <DocumentSummaryPanel summary={detail.documentSummary} />
-            </View>
-            <DocumentRequirementList
-              title="Documentos de la empresa"
-              requirements={companyRequirements}
-              actor="driver"
-              emptyText="La empresa todavía no ha definido documentos para este viaje."
+          reviewEvents === undefined ? (
+            <AppLoading message="Cargando historial" />
+          ) : (
+            <DriverTripDocumentsSection
+              tripId={resolvedTripId}
+              summary={detail.documentSummary}
+              belongsToDriver={detail.access.belongsToDriver}
+              companyRequirements={companyRequirements}
+              driverRequirements={driverRequirements}
+              companyDocuments={companyDocuments}
+              driverDocuments={driverDocuments}
+              reviewEvents={reviewEvents as DocumentReviewEventView[]}
             />
-            <DocumentRequirementList
-              title="Documentos que debo enviar"
-              requirements={driverRequirements}
-              actor="driver"
-              emptyText="No tienes documentos requeridos para enviar."
-            />
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Archivos de la empresa</Text>
-              {companyDocuments.length === 0 ? (
-                <Text style={styles.emptyText}>Este viaje no tiene documentos de la empresa todavía.</Text>
-              ) : (
-                <View style={styles.docList}>
-                  {companyDocuments.map((document) => (
-                    <DocumentCard key={document._id} document={document} showDirection={false} />
-                  ))}
-                </View>
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Mis archivos enviados</Text>
-              {driverDocuments.length === 0 ? (
-                <Text style={styles.emptyText}>Todavía no has enviado documentos.</Text>
-              ) : (
-                <View style={styles.docList}>
-                  {driverDocuments.map((document) => (
-                    <DocumentCard key={document._id} document={document} showDirection={false} />
-                  ))}
-                </View>
-              )}
-            </View>
-
-            {detail.access.belongsToDriver ? (
-              <DriverDocumentUploadPanel tripId={resolvedTripId} documents={driverDocuments} />
-            ) : null}
-            {reviewEvents === undefined ? (
-              <AppLoading message="Cargando historial" />
-            ) : (
-              <DocumentReviewHistory events={reviewEvents as DocumentReviewEventView[]} limit={10} />
-            )}
-          </View>
+          )
         ) : null}
 
         {activeTab === 'events' ? (
@@ -383,22 +343,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     marginLeft: spacing[3],
     textAlign: 'right',
-  },
-  section: {
-    gap: spacing[3],
-  },
-  sectionTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.base,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-  },
-  docList: {
-    gap: spacing[3],
   },
   separator: {
     backgroundColor: colors.borderSubtle,
