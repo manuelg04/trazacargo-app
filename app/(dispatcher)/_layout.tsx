@@ -1,9 +1,17 @@
 import { Redirect, Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
 import { useCurrentProfile } from '@/src/features/auth/useCurrentProfile';
-import { colors, fontFamily, fontSize, size } from '@/constants/theme';
+import { fontFamily } from '@/constants/theme';
+
+const palette = {
+  green800: '#1A5C38',
+  neutral400: '#94A3B8',
+  neutral100: '#F1F5F9',
+  white: '#FFFFFF',
+};
 
 export default function DispatcherLayout() {
   const { currentProfile, isAuthenticated, isLoading, isProfileLoading } = useCurrentProfile();
@@ -36,20 +44,59 @@ export default function DispatcherLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.brand500,
-        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarActiveTintColor: palette.green800,
+        tabBarInactiveTintColor: palette.neutral400,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
-        tabBarIcon: () => null,
-        tabBarIconStyle: { display: 'none' },
+        tabBarIconStyle: styles.tabIcon,
       }}>
-      <Tabs.Screen name="dashboard" options={{ tabBarLabel: 'Dashboard' }} />
-      <Tabs.Screen name="trips" options={{ tabBarLabel: 'Viajes' }} />
-      <Tabs.Screen name="drivers" options={{ tabBarLabel: 'Conductores' }} />
-      <Tabs.Screen name="access-codes" options={{ tabBarLabel: 'Accesos' }} />
-      <Tabs.Screen name="settings" options={{ tabBarLabel: 'Config.' }} />
-      <Tabs.Screen name="account" options={{ tabBarLabel: 'Cuenta' }} />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          tabBarLabel: 'Dashboard',
+          tabBarIcon: ({ color }) => <Ionicons name="grid-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="trips"
+        options={{
+          tabBarLabel: 'Viajes',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="truck-outline" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="drivers"
+        options={{
+          tabBarLabel: 'Conductores',
+          tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="access-codes"
+        options={{
+          tabBarLabel: 'Accesos',
+          tabBarIcon: ({ color }) => <Ionicons name="key-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          tabBarLabel: 'Config.',
+          tabBarIcon: ({ color }) => <Ionicons name="settings-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="account"
+        options={{
+          tabBarLabel: 'Cuenta',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person-circle-outline" size={22} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen name="create-trip" options={{ href: null }} />
       <Tabs.Screen name="trip/[tripId]" options={{ href: null }} />
     </Tabs>
@@ -58,18 +105,22 @@ export default function DispatcherLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.surface,
-    borderTopColor: colors.borderSubtle,
+    backgroundColor: palette.white,
+    borderTopColor: palette.neutral100,
     borderTopWidth: 1,
-    height: size.navBar,
+    height: 68,
     paddingBottom: 8,
     paddingTop: 8,
   },
   tabItem: {
     justifyContent: 'center',
   },
+  tabIcon: {
+    marginBottom: -2,
+  },
   tabLabel: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xs,
+    fontFamily: fontFamily.semibold,
+    fontSize: 9,
+    letterSpacing: 0.1,
   },
 });
