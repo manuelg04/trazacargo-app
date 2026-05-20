@@ -28,6 +28,7 @@ type DocumentRequirementCardProps = {
   onReactivate?: (requirementId: Id<'tripDocumentRequirements'>) => Promise<void>;
   onUpdateDueDate?: (requirementId: Id<'tripDocumentRequirements'>, dueAt?: string) => Promise<void>;
   onUploaded?: () => void;
+  uploadsEnabled?: boolean;
 };
 
 export function DocumentRequirementCard({
@@ -37,6 +38,7 @@ export function DocumentRequirementCard({
   onReactivate,
   onUpdateDueDate,
   onUploaded,
+  uploadsEnabled = true,
 }: DocumentRequirementCardProps) {
   const [showUpload, setShowUpload] = useState(false);
   const [showManagement, setShowManagement] = useState(false);
@@ -47,7 +49,7 @@ export function DocumentRequirementCard({
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const document = requirement.satisfiedByDocument ?? requirement.latestDocument;
-  const canUpload = canActorUploadRequirement(actor, requirement);
+  const canUpload = uploadsEnabled && canActorUploadRequirement(actor, requirement);
   const canManage = actor === 'dispatcher' && Boolean(onWaive && onReactivate);
   const canManageDueDate = actor === 'dispatcher' && Boolean(onUpdateDueDate);
   const canReview = actor === 'dispatcher' && document?.direction === 'DRIVER_TO_COMPANY' && document.status === 'SUBMITTED';

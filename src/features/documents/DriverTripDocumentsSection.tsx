@@ -54,7 +54,16 @@ export function DriverTripDocumentsSection({
         requirements={driverRequirements}
         actor="driver"
         emptyText="No tienes documentos requeridos para enviar."
+        uploadsEnabled={belongsToDriver}
       />
+      {belongsToDriver ? null : (
+        <View style={styles.pendingOfferPanel}>
+          <Text style={styles.pendingOfferTitle}>Acepta el viaje para enviar documentos</Text>
+          <Text style={styles.pendingOfferText}>
+            Puedes revisar la información y los documentos disponibles, pero la subida se habilita después de aceptar la oferta.
+          </Text>
+        </View>
+      )}
       <OtherDocumentsSection
         description="Soportes adicionales que no están asociados a un requisito del checklist."
         documents={otherDocuments}
@@ -81,6 +90,24 @@ const styles = StyleSheet.create({
   },
   description: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+  },
+  pendingOfferPanel: {
+    backgroundColor: colors.infoBg,
+    borderColor: colors.infoBd,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+    padding: spacing[3],
+  },
+  pendingOfferTitle: {
+    color: colors.info,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.sm,
+  },
+  pendingOfferText: {
+    color: colors.info,
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
   },

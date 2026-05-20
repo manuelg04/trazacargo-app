@@ -16,6 +16,7 @@ import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { typography } from '@/src/theme/typography';
 import { formatFileSize } from '@/src/utils/formatFileSize';
+import { getActionErrorMessage } from '@/src/utils/getActionErrorMessage';
 
 type DocumentTypeOption = {
   value: DocumentType;
@@ -160,8 +161,7 @@ export function DocumentUploadForm({
       setSelectedFile(undefined);
       onUploaded?.();
     } catch (submitError) {
-      const message = submitError instanceof Error && submitError.message ? submitError.message : 'No se pudo guardar el documento.';
-      setLocalError(message);
+      setLocalError(getActionErrorMessage(submitError, 'No se pudo guardar el documento.'));
     }
   };
 

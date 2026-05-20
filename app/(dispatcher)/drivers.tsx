@@ -1,18 +1,41 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { AppButton } from '@/src/components/AppButton';
-import { AppCard } from '@/src/components/AppCard';
+import { fontFamily } from '@/constants/theme';
 import { AppEmptyState } from '@/src/components/AppEmptyState';
 import { AppInput } from '@/src/components/AppInput';
 import { AppLoading } from '@/src/components/AppLoading';
-import { AppScreen } from '@/src/components/AppScreen';
+import { AppSelect } from '@/src/components/AppSelect';
 import { DriverCard } from '@/src/features/dispatcher/DriverCard';
 import { getActionErrorMessage } from '@/src/utils/getActionErrorMessage';
+
+const palette = {
+  green800: '#1A5C38',
+  neutral900: '#0F172A',
+  neutral700: '#334155',
+  neutral500: '#64748B',
+  neutral400: '#94A3B8',
+  neutral300: '#CBD5E1',
+  neutral200: '#E2E8F0',
+  neutral100: '#F1F5F9',
+  white: '#FFFFFF',
+  emerald: '#16A34A',
+  emeraldBg: '#DCFCE7',
+  red: '#DC2626',
+  redBg: '#FEF2F2',
+  error: '#C23030',
+  errorBg: '#FEF0F0',
+  errorBd: '#E0A0A0',
+  successBg: '#DCFCE7',
+  successBd: '#9ACDB0',
+  success: '#16A34A',
+};
+
+const VEHICLE_TYPES = ['Tractomula', 'Camión', 'Furgón', 'Camioneta', 'Otro'];
 
 export default function DispatcherDriversScreen() {
   const drivers = useQuery(api.drivers.listForCurrentCompany, {});
@@ -20,6 +43,8 @@ export default function DispatcherDriversScreen() {
   const updateDriver = useMutation(api.drivers.updateDriverForCurrentCompany);
   const updateDriverStatus = useMutation(api.drivers.updateStatusForCurrentCompany);
   const createAccessCode = useMutation(api.accessCodes.createDriverAccessCode);
+
+  const [showForm, setShowForm] = useState(false);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [documentNumber, setDocumentNumber] = useState('');
@@ -31,6 +56,16 @@ export default function DispatcherDriversScreen() {
   const [updatingStatusDriverId, setUpdatingStatusDriverId] = useState<Id<'drivers'> | null>(null);
   const [generatedCode, setGeneratedCode] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+
+  const activeCount = drivers?.filter((d) => d.status === 'ACTIVE').length ?? 0;
+
+  const resetForm = () => {
+    setFullName('');
+    setPhone('');
+    setDocumentNumber('');
+    setVehiclePlate('');
+    setVehicleType('');
+  };
 
   const handleCreateDriver = async () => {
     if (!fullName.trim() || !phone.trim() || !documentNumber.trim()) {
@@ -48,11 +83,8 @@ export default function DispatcherDriversScreen() {
 
     try {
       await createDriver({ fullName, phone, documentNumber, vehiclePlate, vehicleType });
-      setFullName('');
-      setPhone('');
-      setDocumentNumber('');
-      setVehiclePlate('');
-      setVehicleType('');
+      resetForm();
+      setShowForm(false);
     } catch (createError) {
       setError(getActionErrorMessage(createError));
     } finally {
@@ -77,11 +109,7 @@ export default function DispatcherDriversScreen() {
 
   const handleUpdateDriver = async (
     driverId: Id<'drivers'>,
-    input: {
-      fullName: string;
-      phone: string;
-      documentNumber: string;
-    },
+    input: { fullName: string; phone: string; documentNumber: string },
   ) => {
     setUpdatingDriverId(driverId);
     setError(undefined);
@@ -110,57 +138,164 @@ export default function DispatcherDriversScreen() {
 
   return (
     <View style={styles.root}>
-      <SafeAreaView style={styles.header} edges={['top']}>
-        <Text style={styles.headerTitle}>Conductores</Text>
-      </SafeAreaView>
-      <AppScreen>
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-        {generatedCode ? (
-          <AppCard style={styles.generatedCard}>
-            <Text style={styles.generatedLabel}>Código generado</Text>
-            <Text style={styles.generatedCode}>{generatedCode}</Text>
-            <Text style={styles.generatedHint}>Comparte este código con el conductor. Es de un solo uso.</Text>
-          </AppCard>
-        ) : null}
-        <AppCard>
-          <Text style={styles.formTitle}>Nuevo conductor</Text>
-          <View style={styles.form}>
-            <AppInput label="Nombre completo" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
-            <AppInput label="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-            <AppInput label="Documento" value={documentNumber} onChangeText={setDocumentNumber} keyboardType="number-pad" />
-            <AppInput label="Placa" value={vehiclePlate} onChangeText={setVehiclePlate} autoCapitalize="characters" />
-            <AppInput label="Tipo de vehículo" value={vehicleType} onChangeText={setVehicleType} autoCapitalize="words" />
-            <AppButton label="Crear conductor" variant="primary" size="lg" fullWidth onPress={handleCreateDriver} loading={creating} />
-          </View>
-        </AppCard>
-        {drivers === undefined ? <AppLoading message="Cargando conductores" /> : null}
-        {drivers && drivers.length === 0 ? (
-          <AppEmptyState icon="👥" title="Sin conductores" message="Aún no hay conductores registrados." />
-        ) : null}
-        {drivers && drivers.length > 0 ? (
-          <FlatList
-            data={drivers}
-            keyExtractor={(item) => item._id}
-            renderItem={({ item }) => (
-              <DriverCard
-                driver={item}
-                onGenerateAccessCode={handleGenerateAccessCode}
-                onUpdateDriver={handleUpdateDriver}
-                onUpdateStatus={handleUpdateStatus}
-                generating={generatingDriverId === item._id}
-                updating={updatingDriverId === item._id}
-                updatingStatus={updatingStatusDriverId === item._id}
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.body}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
+          {showForm ? (
+            <View style={styles.formHeader}>
+              <Pressable
+                onPress={() => {
+                  setShowForm(false);
+                  setError(undefined);
+                }}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.backBtn, pressed ? styles.pressed : null]}>
+                <Ionicons name="chevron-back" size={20} color={palette.neutral700} />
+              </Pressable>
+              <View style={styles.formHeaderText}>
+                <Text style={styles.formTitle}>Nuevo conductor</Text>
+                <Text style={styles.formSubtitle}>Registra un conductor en tu flota</Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.listHeader}>
+              <View style={styles.listHeaderText}>
+                <Text style={styles.pageTitle}>Conductores</Text>
+                <Text style={styles.pageSubtitle}>
+                  {drivers ? `${activeCount} activos` : 'Cargando…'}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  setShowForm(true);
+                  setError(undefined);
+                  setGeneratedCode(undefined);
+                }}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.newBtn, pressed ? styles.newBtnPressed : null]}>
+                <Ionicons name="add" size={14} color={palette.white} />
+                <Text style={styles.newBtnText}>Nuevo</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {generatedCode ? (
+            <View style={styles.generatedCard}>
+              <Text style={styles.generatedLabel}>Código generado</Text>
+              <Text style={styles.generatedCode}>{generatedCode}</Text>
+              <Text style={styles.generatedHint}>
+                Comparte este código con el conductor. Es de un solo uso.
+              </Text>
+            </View>
+          ) : null}
+
+          {showForm ? (
+            <View style={styles.formCard}>
+              <Text style={styles.sectionLabel}>Datos personales</Text>
+              <AppInput
+                label="Nombre completo *"
+                value={fullName}
+                onChangeText={setFullName}
+                autoCapitalize="words"
               />
-            )}
-            scrollEnabled={false}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-          />
-        ) : null}
-      </AppScreen>
+              <View style={styles.row}>
+                <View style={styles.col}>
+                  <AppInput
+                    label="Teléfono *"
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                <View style={styles.col}>
+                  <AppInput
+                    label="Documento *"
+                    value={documentNumber}
+                    onChangeText={setDocumentNumber}
+                    keyboardType="number-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.sectionLabelRow}>
+                <Text style={styles.sectionLabel}>Vehículo</Text>
+                <Text style={styles.sectionLabelHint}>(opcional)</Text>
+              </View>
+              <View style={styles.row}>
+                <View style={styles.col}>
+                  <AppInput
+                    label="Placa"
+                    value={vehiclePlate}
+                    onChangeText={setVehiclePlate}
+                    autoCapitalize="characters"
+                  />
+                </View>
+                <View style={styles.col}>
+                  <AppSelect
+                    label="Tipo de vehículo"
+                    value={vehicleType}
+                    options={VEHICLE_TYPES}
+                    onChange={setVehicleType}
+                  />
+                </View>
+              </View>
+
+              <Pressable
+                onPress={handleCreateDriver}
+                disabled={creating}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.submitBtn,
+                  pressed && !creating ? styles.submitPressed : null,
+                  creating ? styles.submitDisabled : null,
+                ]}>
+                <Ionicons name="add" size={18} color={palette.white} />
+                <Text style={styles.submitText}>
+                  {creating ? 'Creando…' : 'Crear conductor'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {drivers === undefined ? <AppLoading message="Cargando conductores" /> : null}
+          {drivers && drivers.length === 0 ? (
+            <AppEmptyState icon="👥" title="Sin conductores" message="Aún no hay conductores registrados." />
+          ) : null}
+          {drivers && drivers.length > 0 ? (
+            <View>
+              {showForm ? <Text style={[styles.sectionLabel, styles.fleetLabel]}>Tu flota</Text> : null}
+              <FlatList
+                data={drivers}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <DriverCard
+                    driver={item}
+                    onGenerateAccessCode={handleGenerateAccessCode}
+                    onUpdateDriver={handleUpdateDriver}
+                    onUpdateStatus={handleUpdateStatus}
+                    generating={generatingDriverId === item._id}
+                    updating={updatingDriverId === item._id}
+                    updatingStatus={updatingStatusDriverId === item._id}
+                  />
+                )}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+              />
+            </View>
+          ) : null}
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
@@ -168,67 +303,213 @@ export default function DispatcherDriversScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.bgCanvas,
+    backgroundColor: palette.neutral100,
   },
-  header: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[3],
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+  safe: {
+    flex: 1,
   },
-  headerTitle: {
+  scroll: {
+    flex: 1,
+  },
+  body: {
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 40,
+    gap: 14,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingTop: 16,
+    paddingBottom: 4,
+    paddingHorizontal: 6,
+  },
+  listHeaderText: {
+    flex: 1,
+  },
+  pageTitle: {
     fontFamily: fontFamily.extrabold,
-    fontSize: fontSize.xl,
-    color: colors.textPrimary,
+    fontSize: 24,
+    color: palette.neutral900,
+    letterSpacing: -1,
+  },
+  pageSubtitle: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 12,
+    color: palette.neutral400,
+    marginTop: 4,
+  },
+  newBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: palette.green800,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: palette.green800,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  newBtnPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.98 }],
+  },
+  newBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 13,
+    color: palette.white,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingTop: 12,
+    paddingBottom: 4,
+    paddingHorizontal: 6,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: palette.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+  formHeaderText: {
+    flex: 1,
+  },
+  formTitle: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: 22,
+    color: palette.neutral900,
+    letterSpacing: -0.7,
+  },
+  formSubtitle: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: palette.neutral400,
+    marginTop: 4,
+  },
+  formCard: {
+    backgroundColor: palette.white,
+    borderRadius: 20,
+    padding: 20,
+    gap: 14,
+  },
+  sectionLabel: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: 10,
+    color: palette.neutral400,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sectionLabelHint: {
+    fontFamily: fontFamily.medium,
+    fontSize: 10,
+    color: palette.neutral300,
+  },
+  fleetLabel: {
+    marginBottom: 10,
+    paddingHorizontal: 6,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  col: {
+    flex: 1,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: palette.neutral100,
+    marginHorizontal: -4,
+    marginVertical: 2,
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: palette.green800,
+    borderRadius: 16,
+    height: 54,
+    marginTop: 4,
+    shadowColor: palette.green800,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  submitPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
+  },
+  submitDisabled: {
+    opacity: 0.6,
+  },
+  submitText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: palette.white,
+    letterSpacing: -0.2,
   },
   errorBox: {
-    backgroundColor: colors.errorBg,
-    borderColor: colors.errorBd,
-    borderRadius: 10,
+    backgroundColor: palette.errorBg,
+    borderColor: palette.errorBd,
+    borderRadius: 12,
     borderWidth: 1,
-    padding: spacing[4],
+    padding: 14,
   },
   errorText: {
-    color: colors.error,
+    color: palette.error,
     fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
+    fontSize: 13,
   },
   generatedCard: {
-    backgroundColor: colors.successBg,
-    borderColor: colors.successBd,
+    backgroundColor: palette.successBg,
+    borderColor: palette.successBd,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
   },
   generatedLabel: {
-    color: colors.success,
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xs,
+    color: palette.success,
+    fontFamily: fontFamily.extrabold,
+    fontSize: 11,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   generatedCode: {
-    color: colors.brand500,
-    fontFamily: fontFamily.bold,
-    fontSize: 22,
+    color: palette.green800,
+    fontFamily: fontFamily.extrabold,
+    fontSize: 24,
     letterSpacing: 4,
     marginTop: 6,
   },
   generatedHint: {
-    color: colors.textSecondary,
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
+    color: palette.neutral500,
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
     marginTop: 6,
   },
-  formTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.base,
-    marginBottom: spacing[3],
-  },
-  form: {
-    gap: spacing[3],
-  },
   separator: {
-    height: spacing[3],
+    height: 12,
   },
 });

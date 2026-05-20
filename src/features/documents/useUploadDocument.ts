@@ -4,6 +4,7 @@ import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { DocumentDirection, DocumentType, getDocumentTypeLabel } from '@/src/features/documents/documentLabels';
 import { UploadableFile, uploadFileToConvex } from '@/src/features/documents/uploadFileToConvex';
+import { getActionErrorMessage } from '@/src/utils/getActionErrorMessage';
 
 type UploadDocumentInput = {
   documentType: DocumentType;
@@ -55,9 +56,9 @@ export function useUploadDocument({ tripId, direction }: UseUploadDocumentInput)
           });
         }
       } catch (uploadError) {
-        const message = uploadError instanceof Error && uploadError.message ? uploadError.message : 'No se pudo subir el documento.';
+        const message = getActionErrorMessage(uploadError, 'No se pudo subir el documento.');
         setError(message);
-        throw uploadError;
+        throw new Error(message);
       } finally {
         setUploading(false);
       }

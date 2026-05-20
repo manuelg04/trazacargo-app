@@ -14,6 +14,7 @@ type DocumentRequirementListProps = {
   onReactivate?: (requirementId: Id<'tripDocumentRequirements'>) => Promise<void>;
   onUpdateDueDate?: (requirementId: Id<'tripDocumentRequirements'>, dueAt?: string) => Promise<void>;
   onUploaded?: () => void;
+  uploadsEnabled?: boolean;
 };
 
 export function DocumentRequirementList({
@@ -26,6 +27,7 @@ export function DocumentRequirementList({
   onReactivate,
   onUpdateDueDate,
   onUploaded,
+  uploadsEnabled = true,
 }: DocumentRequirementListProps) {
   return (
     <View style={styles.section}>
@@ -41,6 +43,7 @@ export function DocumentRequirementList({
           onReactivate={onReactivate}
           onUpdateDueDate={onUpdateDueDate}
           onUploaded={onUploaded}
+          uploadsEnabled={uploadsEnabled}
         />
       ))}
     </View>
