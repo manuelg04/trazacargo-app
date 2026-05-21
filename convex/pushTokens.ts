@@ -153,7 +153,7 @@ export const listActiveTokensForDrivers = internalQuery({
       }
     }
 
-    return Array.from(tokensById.values());
+    return Array.from(tokensById.values()).map(serializePushTokenForSend);
   },
 });
 
@@ -172,7 +172,7 @@ export const listActiveDispatcherAdminTokensForCompany = internalQuery({
       .withIndex('by_company_role_active', (q) => q.eq('companyId', args.companyId).eq('role', 'ADMIN').eq('isActive', true))
       .collect();
 
-    return [...dispatcherTokens, ...adminTokens];
+    return [...dispatcherTokens, ...adminTokens].map(serializePushTokenForSend);
   },
 });
 
@@ -231,4 +231,20 @@ function normalizeOptionalText(value: string | undefined) {
 
 function isExpoPushToken(value: string) {
   return value.startsWith('ExpoPushToken[') || value.startsWith('ExponentPushToken[');
+}
+
+function serializePushTokenForSend(token: Doc<'pushTokens'>) {
+  return {
+    _id: token._id,
+    expoPushToken: token.expoPushToken,
+    userProfileId: token.userProfileId,
+    companyId: token.companyId,
+    role: token.role,
+    driverId: token.driverId,
+    platform: token.platform,
+    projectId: token.projectId,
+    appOwnership: token.appOwnership,
+    deviceName: token.deviceName,
+    isActive: token.isActive,
+  };
 }
