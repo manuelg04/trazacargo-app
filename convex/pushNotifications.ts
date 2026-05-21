@@ -6,6 +6,7 @@ import { notificationEventStatusValidator, pushNotificationDataValidator, pushNo
 import {
   ExpoPushMessage,
   PushNotificationKind,
+  PushNotificationAudience,
   PushNotificationReviewStatus,
   buildNotificationEventKey,
   buildNotificationMessage,
@@ -27,6 +28,9 @@ type QueueNotificationInput = {
   requirementId?: Id<'tripDocumentRequirements'>;
   offerId?: Id<'tripOffers'>;
   reviewStatus?: PushNotificationReviewStatus;
+  deadlineAt?: number;
+  notificationAudience?: PushNotificationAudience;
+  ignoreAnyExistingEvent?: boolean;
   target: 'drivers' | 'dispatcher_admins';
 };
 
@@ -37,12 +41,19 @@ export async function queuePushNotification(ctx: MutationCtx, input: QueueNotifi
     tripId: input.tripId,
     driverId: input.driverId,
     documentId: input.documentId,
+    requirementId: input.requirementId,
     reviewStatus: input.reviewStatus,
+    deadlineAt: input.deadlineAt,
+    notificationAudience: input.notificationAudience,
   });
   const existingEvent = await ctx.db
     .query('notificationEvents')
     .withIndex('by_eventKey', (q) => q.eq('eventKey', eventKey))
     .first();
+
+  if (input.ignoreAnyExistingEvent && existingEvent) {
+    return null;
+  }
 
   if (shouldIgnoreExistingNotificationEvent(existingEvent ?? undefined)) {
     return null;
@@ -55,6 +66,7 @@ export async function queuePushNotification(ctx: MutationCtx, input: QueueNotifi
     requirementId: input.requirementId,
     offerId: input.offerId,
     reviewStatus: input.reviewStatus,
+    notificationAudience: input.notificationAudience,
   });
   const now = Date.now();
   const hasActiveTokens = await hasActiveTargetTokens(ctx, input);
@@ -91,6 +103,8 @@ export async function queuePushNotification(ctx: MutationCtx, input: QueueNotifi
     requirementId: input.requirementId,
     offerId: input.offerId,
     reviewStatus: input.reviewStatus,
+    deadlineAt: input.deadlineAt,
+    notificationAudience: input.notificationAudience,
     target: input.target,
     eventKey,
   });
@@ -110,6 +124,8 @@ export const sendQueuedNotification = internalAction({
     requirementId: v.optional(v.id('tripDocumentRequirements')),
     offerId: v.optional(v.id('tripOffers')),
     reviewStatus: v.optional(reviewStatusValidator),
+    deadlineAt: v.optional(v.number()),
+    notificationAudience: v.optional(v.union(v.literal('driver'), v.literal('staff'))),
     target: targetValidator,
     eventKey: v.string(),
   },
@@ -141,6 +157,7 @@ export const sendQueuedNotification = internalAction({
       requirementId: args.requirementId,
       offerId: args.offerId,
       reviewStatus: args.reviewStatus,
+      notificationAudience: args.notificationAudience,
     });
     const pushMessages: ExpoPushMessage[] = tokens.map((token) => ({
       to: token.expoPushToken,

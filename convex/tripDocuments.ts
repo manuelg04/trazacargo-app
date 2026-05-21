@@ -122,6 +122,21 @@ export const createCompanyDocumentForTrip = mutation({
       throw new ConvexError('No se pudo guardar el documento.');
     }
 
+    const driverId = trip.acceptedByDriverId ?? trip.assignedDriverId;
+
+    if (driverId) {
+      await queuePushNotification(ctx, {
+        kind: 'company_document_available',
+        companyId: trip.companyId,
+        tripId: args.tripId,
+        driverIds: [driverId],
+        driverId,
+        documentId,
+        requirementId: args.requirementId,
+        target: 'drivers',
+      });
+    }
+
     return await serializeTripDocument(ctx, document);
   },
 });

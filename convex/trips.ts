@@ -367,6 +367,7 @@ export const acceptOfferForCurrentDriver = mutation({
       .query('tripOffers')
       .withIndex('by_trip', (q) => q.eq('tripId', args.tripId))
       .collect();
+    const unavailableOffers: { offerId: Id<'tripOffers'>; driverId: Id<'drivers'> }[] = [];
 
     for (const tripOffer of tripOffers) {
       if (tripOffer._id !== offer._id && tripOffer.status === 'PENDING') {
@@ -374,6 +375,9 @@ export const acceptOfferForCurrentDriver = mutation({
           status: 'CANCELLED',
           updatedAt: now,
         });
+        if (tripOffer.driverId !== driverId) {
+          unavailableOffers.push({ offerId: tripOffer._id, driverId: tripOffer.driverId });
+        }
       }
     }
 
@@ -385,6 +389,17 @@ export const acceptOfferForCurrentDriver = mutation({
       driverId,
       target: 'dispatcher_admins',
     });
+    for (const unavailableOffer of unavailableOffers) {
+      await queuePushNotification(ctx, {
+        kind: 'offer_no_longer_available',
+        companyId: trip.companyId,
+        tripId: args.tripId,
+        driverIds: [unavailableOffer.driverId],
+        driverId: unavailableOffer.driverId,
+        offerId: unavailableOffer.offerId,
+        target: 'drivers',
+      });
+    }
 
     return null;
   },
@@ -752,6 +767,12 @@ export const cancelTripForDispatcher = mutation({
       .query('tripOffers')
       .withIndex('by_trip', (q) => q.eq('tripId', args.tripId))
       .collect();
+    const notifiedDriverIds = new Set<Id<'drivers'>>();
+    const tripDriverId = trip.acceptedByDriverId ?? trip.assignedDriverId;
+
+    if (tripDriverId) {
+      notifiedDriverIds.add(tripDriverId);
+    }
 
     for (const offer of offers) {
       if (offer.status === 'PENDING') {
@@ -759,6 +780,7 @@ export const cancelTripForDispatcher = mutation({
           status: 'CANCELLED',
           updatedAt: now,
         });
+        notifiedDriverIds.add(offer.driverId);
       }
     }
 
@@ -766,6 +788,17 @@ export const cancelTripForDispatcher = mutation({
       status: 'CANCELLED',
       updatedAt: now,
     });
+
+    for (const driverId of notifiedDriverIds) {
+      await queuePushNotification(ctx, {
+        kind: 'trip_cancelled',
+        companyId: trip.companyId,
+        tripId: args.tripId,
+        driverIds: [driverId],
+        driverId,
+        target: 'drivers',
+      });
+    }
 
     return null;
   },

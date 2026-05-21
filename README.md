@@ -48,6 +48,15 @@ Promesa del producto:
 - Notificaciones para oferta nueva, viaje aceptado, documento subido, documento revisado y documentación completa
 - Navegación segura al tocar notificaciones según tipo de evento y rol actual
 
+## Qué incluye la segunda fase push
+
+- Notificación al conductor cuando un viaje se cancela
+- Notificación a otros conductores cuando una oferta deja de estar disponible porque otro conductor aceptó
+- Notificación al conductor cuando la empresa sube un documento operativo del viaje
+- Notificación al conductor cuando un documento obligatorio está próximo a vencer
+- Notificación al conductor y a dispatcher/admin cuando un documento obligatorio está vencido o atrasado
+- Job programado de Convex cada hora para revisar documentos con fecha límite
+
 ## Instalar
 
 ```bash
@@ -225,6 +234,21 @@ Si una empresa no tiene plantillas activas, TrazaCargo usa los requisitos base:
 13. Completa o exime todos los requisitos obligatorios.
 14. Confirma que dispatcher/admin recibe `Documentación completa`.
 15. Revisa `notificationEvents` en Convex para ver estados, tickets, errores y claves de evento.
+
+## Probar segunda fase push
+
+1. Ejecuta `npx convex dev`.
+2. Ejecuta `npm run start`.
+3. Inicia sesión como conductor y confirma un token activo en `pushTokens`.
+4. Inicia sesión como dispatcher/admin en otro usuario o dispositivo y confirma un token activo.
+5. Para `Viaje cancelado`, crea un viaje, ofértalo, acéptalo como conductor y cancélalo como dispatcher/admin. El conductor debe recibir `Viaje cancelado`.
+6. Para `Oferta ya no disponible`, crea un viaje, ofértalo a dos o más conductores y acéptalo con uno. Los demás conductores con oferta pendiente deben recibir `Oferta ya no disponible`.
+7. Para `Documento disponible`, crea un viaje aceptado y sube manifiesto, remesa u orden de cargue como dispatcher/admin. El conductor debe recibir `Documento disponible`.
+8. Para `Documento pendiente por vencer`, crea o edita un requisito obligatorio del conductor con fecha límite dentro de las próximas 24 horas, déjalo pendiente o rechazado y espera el job programado. El conductor debe recibir `Documento pendiente por vencer`.
+9. Para `Documento vencido`, crea o edita un requisito obligatorio del conductor con fecha límite en el pasado, déjalo pendiente o rechazado y espera el job programado. El conductor debe recibir `Documento vencido` y dispatcher/admin debe recibir `Documento atrasado`.
+10. Revisa `notificationEvents` y confirma `eventKey`, estado, destinatario, tickets o errores. Al repetir el job no deben duplicarse eventos para el mismo requisito y la misma fecha límite.
+
+Las notificaciones de vencimiento dependen del job programado de Convex. La entrega remota, especialmente en Android, debe validarse con build interna o development build, no únicamente con Expo Go.
 
 ## Pruebas automatizadas
 

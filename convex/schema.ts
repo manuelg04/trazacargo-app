@@ -125,6 +125,11 @@ export const pushNotificationKindValidator = v.union(
   v.literal('driver_document_uploaded'),
   v.literal('document_reviewed'),
   v.literal('documentation_complete'),
+  v.literal('trip_cancelled'),
+  v.literal('offer_no_longer_available'),
+  v.literal('company_document_available'),
+  v.literal('document_due_soon'),
+  v.literal('document_overdue'),
 );
 
 export const notificationEventStatusValidator = v.union(
@@ -267,7 +272,8 @@ export default defineSchema({
     .index('by_trip', ['tripId'])
     .index('by_company', ['companyId'])
     .index('by_trip_and_direction', ['tripId', 'direction'])
-    .index('by_trip_and_status', ['tripId', 'status']),
+    .index('by_trip_and_status', ['tripId', 'status'])
+    .index('by_status_and_dueAt', ['status', 'dueAt']),
   companyDocumentRequirementTemplates: defineTable({
     companyId: v.id('companies'),
     direction: documentDirectionValidator,

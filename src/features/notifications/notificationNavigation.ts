@@ -27,11 +27,23 @@ export function getNotificationNavigationTarget(data: NotificationData | undefin
           : '/(dispatcher)/dashboard'
         : getRoleHome(role);
     case 'document_reviewed':
+    case 'company_document_available':
+    case 'document_due_soon':
       return role === 'DRIVER'
         ? tripId
           ? { pathname: '/(driver)/trip/[tripId]', params: { tripId } }
           : '/(driver)/trips'
         : getRoleHome(role);
+    case 'trip_cancelled':
+      return role === 'DRIVER' ? '/(driver)/trips' : getRoleHome(role);
+    case 'offer_no_longer_available':
+      return role === 'DRIVER' ? '/(driver)/offers' : getRoleHome(role);
+    case 'document_overdue':
+      if (role === 'DRIVER') {
+        return tripId ? { pathname: '/(driver)/trip/[tripId]', params: { tripId } } : '/(driver)/trips';
+      }
+
+      return tripId ? { pathname: '/(dispatcher)/trip/[tripId]', params: { tripId } } : '/(dispatcher)/dashboard';
     default:
       return getRoleHome(role);
   }

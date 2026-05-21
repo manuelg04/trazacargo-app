@@ -1,6 +1,6 @@
 import { ConvexError, v } from 'convex/values';
 import { Doc, Id } from './_generated/dataModel';
-import { MutationCtx, QueryCtx, mutation, query } from './_generated/server';
+import { MutationCtx, QueryCtx, internalMutation, mutation, query } from './_generated/server';
 import {
   documentDirectionValidator,
   documentRequirementStatusValidator,
@@ -26,6 +26,12 @@ import {
   listActiveTemplatesForCompany,
 } from './companyDocumentRequirementTemplates';
 import { queuePushNotification } from './pushNotifications';
+import {
+  DOCUMENT_DUE_SOON_WINDOW_MS,
+  getResponsibleDriverIdForDeadline,
+  shouldNotifyDocumentDueSoon,
+  shouldNotifyDocumentOverdue,
+} from './lib/documentDeadlineNotifications';
 
 type RequirementCtx = QueryCtx | MutationCtx;
 type RequirementDirection = Doc<'tripDocumentRequirements'>['direction'];
@@ -273,6 +279,102 @@ export const getDocumentSummaryForTrip = query({
     const { profile } = await requireDispatcherOrAdminProfile(ctx);
     await assertDispatcherCanAccessTrip(ctx, profile, args.tripId);
     return await computeTripDocumentSummary(ctx, args.tripId);
+  },
+});
+
+export const queueDocumentDeadlineNotifications = internalMutation({
+  args: {},
+  returns: v.object({
+    dueSoonQueued: v.number(),
+    overdueDriverQueued: v.number(),
+    overdueStaffQueued: v.number(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const dueSoonRequirements = await listRequirementsWithDueAtBetween(ctx, now, now + DOCUMENT_DUE_SOON_WINDOW_MS);
+    const overdueRequirements = await listRequirementsWithDueAtBetween(ctx, undefined, now);
+    let dueSoonQueued = 0;
+    let overdueDriverQueued = 0;
+    let overdueStaffQueued = 0;
+
+    for (const requirement of dueSoonRequirements) {
+      const trip = await ctx.db.get(requirement.tripId);
+
+      if (!trip || !shouldNotifyDocumentDueSoon(requirement, trip, now)) {
+        continue;
+      }
+
+      const driverId = getResponsibleDriverIdForDeadline(trip) as Id<'drivers'> | undefined;
+
+      if (!driverId || requirement.dueAt === undefined) {
+        continue;
+      }
+
+      const eventId = await queuePushNotification(ctx, {
+        kind: 'document_due_soon',
+        companyId: requirement.companyId,
+        tripId: requirement.tripId,
+        driverIds: [driverId],
+        driverId,
+        requirementId: requirement._id,
+        deadlineAt: requirement.dueAt,
+        notificationAudience: 'driver',
+        ignoreAnyExistingEvent: true,
+        target: 'drivers',
+      });
+
+      if (eventId) {
+        dueSoonQueued += 1;
+      }
+    }
+
+    for (const requirement of overdueRequirements) {
+      const trip = await ctx.db.get(requirement.tripId);
+
+      if (!trip || !shouldNotifyDocumentOverdue(requirement, trip, now)) {
+        continue;
+      }
+
+      const driverId = getResponsibleDriverIdForDeadline(trip) as Id<'drivers'> | undefined;
+
+      if (!driverId || requirement.dueAt === undefined) {
+        continue;
+      }
+
+      const driverEventId = await queuePushNotification(ctx, {
+        kind: 'document_overdue',
+        companyId: requirement.companyId,
+        tripId: requirement.tripId,
+        driverIds: [driverId],
+        driverId,
+        requirementId: requirement._id,
+        deadlineAt: requirement.dueAt,
+        notificationAudience: 'driver',
+        ignoreAnyExistingEvent: true,
+        target: 'drivers',
+      });
+
+      if (driverEventId) {
+        overdueDriverQueued += 1;
+      }
+
+      const staffEventId = await queuePushNotification(ctx, {
+        kind: 'document_overdue',
+        companyId: requirement.companyId,
+        tripId: requirement.tripId,
+        requirementId: requirement._id,
+        deadlineAt: requirement.dueAt,
+        notificationAudience: 'staff',
+        ignoreAnyExistingEvent: true,
+        target: 'dispatcher_admins',
+      });
+
+      if (staffEventId) {
+        overdueStaffQueued += 1;
+      }
+    }
+
+    return { dueSoonQueued, overdueDriverQueued, overdueStaffQueued };
   },
 });
 
@@ -549,6 +651,24 @@ async function findActiveRequirement(
       requirement.documentType === documentType &&
       requirement.status !== 'WAIVED',
   );
+}
+
+async function listRequirementsWithDueAtBetween(ctx: MutationCtx, from: number | undefined, to: number) {
+  const statuses: RequirementStatus[] = ['PENDING', 'REJECTED'];
+  const requirements: Doc<'tripDocumentRequirements'>[] = [];
+
+  for (const status of statuses) {
+    const query = ctx.db
+      .query('tripDocumentRequirements')
+      .withIndex('by_status_and_dueAt', (q) => {
+        const statusQuery = q.eq('status', status);
+        return from === undefined ? statusQuery.lte('dueAt', to) : statusQuery.gte('dueAt', from).lte('dueAt', to);
+      });
+
+    requirements.push(...(await query.collect()));
+  }
+
+  return requirements;
 }
 
 async function findExistingRequirementForTemplate(
