@@ -11,6 +11,7 @@ type TripOfferPanelDriver = {
   fullName: string;
   documentNumber: string;
   status?: string;
+  vehicleType?: string;
   vehicle: {
     plate: string;
     vehicleType: string;
@@ -23,10 +24,12 @@ type TripOfferPanelOffer = {
   status: string;
   driver: {
     fullName: string;
+    vehicleType?: string;
   };
 };
 
 type TripOfferPanelProps = {
+  tripVehicleType?: string;
   drivers: TripOfferPanelDriver[];
   offers: TripOfferPanelOffer[];
   selectedDriverIds: Id<'drivers'>[];
@@ -36,6 +39,7 @@ type TripOfferPanelProps = {
 };
 
 export function TripOfferPanel({
+  tripVehicleType,
   drivers,
   offers,
   selectedDriverIds,
@@ -49,6 +53,7 @@ export function TripOfferPanel({
   return (
     <AppCard>
       <Text style={styles.title}>Ofertar viaje</Text>
+      <Text style={styles.tripVehicle}>Tipo requerido: {tripVehicleType || 'No registrado'}</Text>
       <DriverPicker
         drivers={offerableDrivers}
         selectedDriverIds={selectedDriverIds}
@@ -68,7 +73,10 @@ export function TripOfferPanel({
           <Text style={styles.subtitle}>Ofertas enviadas</Text>
           {offers.map((offer) => (
             <View key={offer._id} style={styles.offerRow}>
-              <Text style={styles.offerDriver}>{offer.driver.fullName}</Text>
+              <View style={styles.offerDriverBlock}>
+                <Text style={styles.offerDriver}>{offer.driver.fullName}</Text>
+                <Text style={styles.offerVehicle}>Vehículo: {offer.driver.vehicleType || 'No registrado'}</Text>
+              </View>
               <StatusBadge status={offer.status} />
             </View>
           ))}
@@ -83,6 +91,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontFamily: fontFamily.bold,
     fontSize: fontSize.lg,
+    marginBottom: spacing[3],
+  },
+  tripVehicle: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
     marginBottom: spacing[3],
   },
   action: {
@@ -111,5 +125,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fontFamily.regular,
     fontSize: fontSize.base,
+  },
+  offerDriverBlock: {
+    flex: 1,
+    gap: spacing[1],
+  },
+  offerVehicle: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
   },
 });

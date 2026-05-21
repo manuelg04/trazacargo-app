@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "29113049737",
+    "project_id": "trazacargo-37472",
+    "storage_bucket": "trazacargo-37472.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:29113049737:android:dc645ac7a9b82245059c58",
+        "android_client_info": {
+          "package_name": "com.trazacargo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBja0rjauJ2vfBjL1wedm3EKZaIXUE77p0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

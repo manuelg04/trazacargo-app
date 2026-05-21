@@ -49,6 +49,7 @@ const driverReturn = v.object({
   fullName: v.string(),
   phone: v.string(),
   documentNumber: v.string(),
+  vehicleType: v.optional(v.string()),
   status: driverStatusValidator,
   createdAt: v.number(),
   updatedAt: v.number(),

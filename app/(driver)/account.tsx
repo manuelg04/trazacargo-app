@@ -40,6 +40,7 @@ export default function AccountScreen() {
 
   const profile = currentProfile.profile;
   const driverName = currentProfile.driver?.fullName ?? 'Mi cuenta';
+  const driverVehicleType = currentProfile.driver?.vehicleType ?? 'No registrado';
   const email = currentProfile.user.email ?? 'No disponible';
   const companyName = currentProfile.company?.name ?? 'No disponible';
   const initials = driverName
@@ -78,6 +79,10 @@ export default function AccountScreen() {
           <View style={[styles.row, styles.rowBorder]}>
             <Text style={styles.label}>Conductor</Text>
             <Text style={styles.value}>{currentProfile.driver?.fullName ?? 'No aplica'}</Text>
+          </View>
+          <View style={[styles.row, styles.rowBorder]}>
+            <Text style={styles.label}>Tipo de vehículo</Text>
+            <Text style={styles.value}>{driverVehicleType}</Text>
           </View>
           <View style={[styles.row, styles.rowBorder]}>
             <Text style={styles.label}>Empresa</Text>

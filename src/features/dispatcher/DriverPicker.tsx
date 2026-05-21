@@ -9,6 +9,7 @@ type DriverPickerDriver = {
   _id: Id<'drivers'>;
   fullName: string;
   documentNumber: string;
+  vehicleType?: string;
   vehicle: {
     plate: string;
     vehicleType: string;
@@ -44,6 +45,10 @@ export function DriverPicker({ drivers, selectedDriverIds, offeredDriverIds = []
       {drivers.map((driver) => {
         const selected = selectedDriverIds.includes(driver._id);
         const alreadyOffered = offeredDriverIds.includes(driver._id);
+        const displayedVehicleType = driver.vehicleType ?? driver.vehicle?.vehicleType;
+        const displayedVehicle = driver.vehicle?.plate
+          ? `${driver.vehicle.plate} · ${displayedVehicleType ?? 'No registrado'}`
+          : displayedVehicleType ?? 'No registrado';
 
         return (
           <Pressable
@@ -64,7 +69,7 @@ export function DriverPicker({ drivers, selectedDriverIds, offeredDriverIds = []
             <View style={styles.driverText}>
               <Text style={styles.driverName}>{driver.fullName}</Text>
               <Text style={styles.driverMeta}>
-                {driver.documentNumber} · {driver.vehicle ? `${driver.vehicle.plate} ${driver.vehicle.vehicleType}` : 'Sin vehículo'}
+                {driver.documentNumber} · {displayedVehicle}
               </Text>
               {alreadyOffered ? <Text style={styles.offeredText}>Oferta ya enviada</Text> : null}
             </View>

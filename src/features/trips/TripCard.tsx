@@ -17,6 +17,7 @@ type TripCardTrip = {
   freightValue?: number;
   advanceValue?: number;
   cargoDescription: string;
+  vehicleType?: string;
   status: string;
   documentSummary?: DocumentSummary;
 };
@@ -45,6 +46,7 @@ export function TripCard({ trip, onView, onAccept, accepting = false }: TripCard
 
       <View style={styles.meta}>
         <Text style={styles.metaItem}>📅 {formatDate(trip.pickupAt)}</Text>
+        <Text style={styles.metaItem}>Tipo de vehículo: {trip.vehicleType || 'No registrado'}</Text>
         {trip.freightValue ? <Text style={styles.metaItem}>💵 {formatCurrency(trip.freightValue)}</Text> : null}
         {trip.advanceValue ? <Text style={styles.metaItem}>Anticipo: {formatCurrency(trip.advanceValue)}</Text> : null}
       </View>

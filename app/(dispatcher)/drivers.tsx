@@ -9,7 +9,6 @@ import { fontFamily } from '@/constants/theme';
 import { AppEmptyState } from '@/src/components/AppEmptyState';
 import { AppInput } from '@/src/components/AppInput';
 import { AppLoading } from '@/src/components/AppLoading';
-import { AppSelect } from '@/src/components/AppSelect';
 import { DriverCard } from '@/src/features/dispatcher/DriverCard';
 import { getActionErrorMessage } from '@/src/utils/getActionErrorMessage';
 
@@ -34,8 +33,6 @@ const palette = {
   successBd: '#9ACDB0',
   success: '#16A34A',
 };
-
-const VEHICLE_TYPES = ['Tractomula', 'Camión', 'Furgón', 'Camioneta', 'Otro'];
 
 export default function DispatcherDriversScreen() {
   const drivers = useQuery(api.drivers.listForCurrentCompany, {});
@@ -68,13 +65,8 @@ export default function DispatcherDriversScreen() {
   };
 
   const handleCreateDriver = async () => {
-    if (!fullName.trim() || !phone.trim() || !documentNumber.trim()) {
-      setError('Completa nombre, teléfono y documento.');
-      return;
-    }
-
-    if ((vehiclePlate.trim() && !vehicleType.trim()) || (!vehiclePlate.trim() && vehicleType.trim())) {
-      setError('Para crear vehículo, completa placa y tipo.');
+    if (!fullName.trim() || !phone.trim() || !documentNumber.trim() || !vehicleType.trim()) {
+      setError('Completa nombre, teléfono, documento y tipo de vehículo.');
       return;
     }
 
@@ -109,7 +101,7 @@ export default function DispatcherDriversScreen() {
 
   const handleUpdateDriver = async (
     driverId: Id<'drivers'>,
-    input: { fullName: string; phone: string; documentNumber: string },
+    input: { fullName: string; phone: string; documentNumber: string; vehicleType: string },
   ) => {
     setUpdatingDriverId(driverId);
     setError(undefined);
@@ -230,7 +222,7 @@ export default function DispatcherDriversScreen() {
 
               <View style={styles.sectionLabelRow}>
                 <Text style={styles.sectionLabel}>Vehículo</Text>
-                <Text style={styles.sectionLabelHint}>(opcional)</Text>
+                <Text style={styles.sectionLabelHint}>(tipo requerido)</Text>
               </View>
               <View style={styles.row}>
                 <View style={styles.col}>
@@ -242,11 +234,12 @@ export default function DispatcherDriversScreen() {
                   />
                 </View>
                 <View style={styles.col}>
-                  <AppSelect
-                    label="Tipo de vehículo"
+                  <AppInput
+                    label="Tipo de vehículo *"
                     value={vehicleType}
-                    options={VEHICLE_TYPES}
-                    onChange={setVehicleType}
+                    onChangeText={setVehicleType}
+                    autoCapitalize="words"
+                    placeholder="Tractomula"
                   />
                 </View>
               </View>

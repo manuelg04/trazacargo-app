@@ -168,6 +168,10 @@ export default function TripDetailScreen() {
               <Text style={styles.infoValue}>{detail.trip.cargoDescription}</Text>
             </View>
             <View style={[styles.infoRow, styles.infoRowBorder]}>
+              <Text style={styles.infoLabel}>Tipo de vehículo</Text>
+              <Text style={styles.infoValue}>{detail.trip.vehicleType || 'No registrado'}</Text>
+            </View>
+            <View style={[styles.infoRow, styles.infoRowBorder]}>
               <Text style={styles.infoLabel}>Fecha de cargue</Text>
               <Text style={styles.infoValue}>{formatDate(detail.trip.pickupAt)}</Text>
             </View>

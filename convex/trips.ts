@@ -1,5 +1,5 @@
 import { ConvexError, v } from 'convex/values';
-import { MutationCtx, mutation, query } from './_generated/server';
+import { MutationCtx, QueryCtx, mutation, query } from './_generated/server';
 import { Doc, Id } from './_generated/dataModel';
 import {
   companyStatusValidator,
@@ -44,6 +44,7 @@ const tripFields = {
   pickupAt: v.number(),
   deliveryEta: v.optional(v.number()),
   cargoDescription: v.string(),
+  vehicleType: v.optional(v.string()),
   freightValue: v.optional(v.number()),
   advanceValue: v.optional(v.number()),
   assignedDriverId: v.optional(v.id('drivers')),
@@ -91,6 +92,7 @@ const driverReturn = v.object({
   fullName: v.string(),
   phone: v.string(),
   documentNumber: v.string(),
+  vehicleType: v.optional(v.string()),
   status: driverStatusValidator,
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -474,8 +476,8 @@ export const listForCurrentCompany = query({
     })[] = [];
 
     for (const trip of trips) {
-      const assignedDriver = trip.assignedDriverId ? await ctx.db.get(trip.assignedDriverId) : null;
-      const acceptedDriver = trip.acceptedByDriverId ? await ctx.db.get(trip.acceptedByDriverId) : null;
+      const assignedDriver = await serializeTripDriver(ctx, trip.assignedDriverId ? await ctx.db.get(trip.assignedDriverId) : null);
+      const acceptedDriver = await serializeTripDriver(ctx, trip.acceptedByDriverId ? await ctx.db.get(trip.acceptedByDriverId) : null);
       const offers = await ctx.db
         .query('tripOffers')
         .withIndex('by_trip', (q) => q.eq('tripId', trip._id))
@@ -524,8 +526,8 @@ export const getDetailForDispatcher = query({
       throw new ConvexError('La empresa no está disponible.');
     }
 
-    const assignedDriver = trip.assignedDriverId ? await ctx.db.get(trip.assignedDriverId) : null;
-    const acceptedDriver = trip.acceptedByDriverId ? await ctx.db.get(trip.acceptedByDriverId) : null;
+    const assignedDriver = await serializeTripDriver(ctx, trip.assignedDriverId ? await ctx.db.get(trip.assignedDriverId) : null);
+    const acceptedDriver = await serializeTripDriver(ctx, trip.acceptedByDriverId ? await ctx.db.get(trip.acceptedByDriverId) : null);
     const tripOffers = await ctx.db
       .query('tripOffers')
       .withIndex('by_trip', (q) => q.eq('tripId', args.tripId))
@@ -536,7 +538,11 @@ export const getDetailForDispatcher = query({
       const driver = await ctx.db.get(offer.driverId);
 
       if (driver && driver.companyId === profile.companyId) {
-        offers.push({ ...offer, driver });
+        const serializedDriver = await serializeTripDriver(ctx, driver);
+
+        if (serializedDriver) {
+          offers.push({ ...offer, driver: serializedDriver });
+        }
       }
     }
 
@@ -580,6 +586,7 @@ export const createForDispatcher = mutation({
     pickupAt: v.string(),
     deliveryEta: v.optional(v.string()),
     cargoDescription: v.string(),
+    vehicleType: v.optional(v.string()),
     freightValue: v.optional(v.number()),
     advanceValue: v.optional(v.number()),
     observations: v.optional(v.string()),
@@ -591,6 +598,7 @@ export const createForDispatcher = mutation({
     const originCity = args.originCity.trim();
     const destinationCity = args.destinationCity.trim();
     const cargoDescription = args.cargoDescription.trim();
+    const vehicleType = args.vehicleType?.trim() || undefined;
     const routeLabel = args.routeLabel?.trim() || `${originCity} - ${destinationCity}`;
     const observations = args.observations?.trim() || undefined;
     const pickupAt = parseRequiredDate(args.pickupAt, 'Ingresa una fecha de cargue válida.');
@@ -610,6 +618,7 @@ export const createForDispatcher = mutation({
       pickupAt,
       deliveryEta,
       cargoDescription,
+      vehicleType,
       freightValue,
       advanceValue,
       status: 'DRAFT',
@@ -810,6 +819,26 @@ async function ensureTripAcceptedEvent(
     occurredAt: now,
     createdAt: now,
   });
+}
+
+async function serializeTripDriver(ctx: QueryCtx, driver: Doc<'drivers'> | null) {
+  if (!driver) {
+    return null;
+  }
+
+  if (driver.vehicleType) {
+    return driver;
+  }
+
+  const vehicle = await ctx.db
+    .query('vehicles')
+    .withIndex('by_driver', (q) => q.eq('driverId', driver._id))
+    .first();
+
+  return {
+    ...driver,
+    vehicleType: vehicle?.vehicleType,
+  };
 }
 
 function parseRequiredDate(value: string, message: string) {

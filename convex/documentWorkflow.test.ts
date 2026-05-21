@@ -140,11 +140,52 @@ const updateDriverForCurrentCompany = (
         fullName?: string;
         phone?: string;
         documentNumber?: string;
+        vehicleType?: string;
       },
       unknown
     >
   >
 ).updateDriverForCurrentCompany;
+
+const createDriverForCurrentCompany = (
+  api.drivers as unknown as Record<
+    string,
+    FunctionReference<
+      'mutation',
+      'public',
+      {
+        fullName: string;
+        phone: string;
+        documentNumber: string;
+        vehiclePlate?: string;
+        vehicleType?: string;
+      },
+      {
+        driver: {
+          _id: Id<'drivers'>;
+          fullName: string;
+          vehicleType?: string;
+        };
+      }
+    >
+  >
+).createForCurrentCompany;
+
+const listDriversForCurrentCompany = (
+  api.drivers as unknown as Record<
+    string,
+    FunctionReference<
+      'query',
+      'public',
+      Record<string, never>,
+      {
+        _id: Id<'drivers'>;
+        vehicleType?: string;
+        vehicle: { vehicleType: string } | null;
+      }[]
+    >
+  >
+).listForCurrentCompany;
 
 const updateDriverStatusForCurrentCompany = (
   api.drivers as unknown as Record<
@@ -310,6 +351,50 @@ describe('document workflow rules', () => {
     expect(result.skippedCount).toBe(0);
   });
 
+  test('requires vehicle type when creating a driver and allows missing plate', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const dispatcher = asUser(t, seed.dispatcherUserId, 'dispatcher');
+
+    await expect(
+      dispatcher.mutation(createDriverForCurrentCompany, {
+        fullName: 'Conductor Sin Tipo',
+        phone: '3009998877',
+        documentNumber: 'DOC-SIN-TIPO',
+        vehicleType: '',
+      }),
+    ).rejects.toThrow(ConvexError);
+
+    const result = await dispatcher.mutation(createDriverForCurrentCompany, {
+      fullName: 'Conductor Nuevo',
+      phone: '3009998877',
+      documentNumber: 'DOC-NUEVO',
+      vehicleType: 'Camión sencillo',
+    });
+    const drivers = await dispatcher.query(listDriversForCurrentCompany, {});
+    const createdDriver = drivers.find((driver) => driver._id === result.driver._id);
+
+    expect(result.driver.vehicleType).toBe('Camión sencillo');
+    expect(createdDriver?.vehicleType).toBe('Camión sencillo');
+    expect(createdDriver?.vehicle).toBeNull();
+  });
+
+  test('updates driver vehicle type and keeps the vehicle record in sync', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const dispatcher = asUser(t, seed.dispatcherUserId, 'dispatcher');
+
+    await dispatcher.mutation(updateDriverForCurrentCompany, {
+      driverId: seed.driverId,
+      vehicleType: 'Furgón refrigerado',
+    });
+    const drivers = await dispatcher.query(listDriversForCurrentCompany, {});
+    const updatedDriver = drivers.find((driver) => driver._id === seed.driverId);
+
+    expect(updatedDriver?.vehicleType).toBe('Furgón refrigerado');
+    expect(updatedDriver?.vehicle?.vehicleType).toBe('Furgón refrigerado');
+  });
+
   test('creates default requirements when a dispatcher creates a trip', async () => {
     const t = createTestApp();
     const seed = await seedCompany(t);
@@ -323,12 +408,14 @@ describe('document workflow rules', () => {
       cargoDescription: 'Carga seca',
       freightValue: 3200000,
       advanceValue: 800000,
+      vehicleType: 'Tractomula',
     });
 
     const requirements = await listRequirements(t, trip._id);
 
     expect(trip.freightValue).toBe(3200000);
     expect(trip.advanceValue).toBe(800000);
+    expect(trip.vehicleType).toBe('Tractomula');
     expect(requirements).toHaveLength(6);
     expect(requirements.map((requirement) => [requirement.documentType, requirement.required])).toEqual([
       ['MANIFEST', true],
@@ -570,6 +657,16 @@ async function seedCompany(t: TestApp, suffix = 'main') {
       fullName: `Conductor ${suffix}`,
       phone: '3001234567',
       documentNumber: `DOC-${suffix}`,
+      vehicleType: 'Tractomula',
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert('vehicles', {
+      companyId,
+      driverId,
+      plate: `ABC-${suffix}`,
+      vehicleType: 'Tractomula',
       status: 'ACTIVE',
       createdAt: now,
       updatedAt: now,
@@ -601,6 +698,7 @@ async function seedCompany(t: TestApp, suffix = 'main') {
       pickupAt: now + 3600000,
       deliveryEta: now + 86400000,
       cargoDescription: `Carga ${suffix}`,
+      vehicleType: 'Tractomula',
       assignedDriverId: driverId,
       acceptedByDriverId: driverId,
       status: 'ACCEPTED',
@@ -650,6 +748,7 @@ async function createDispatcherTrip(dispatcher: ReturnType<TestApp['withIdentity
     pickupAt: '2026-05-18',
     deliveryEta: '2026-05-20',
     cargoDescription: 'Carga seca',
+    vehicleType: 'Tractomula',
   });
 }
 

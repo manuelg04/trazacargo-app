@@ -23,6 +23,9 @@ Promesa del producto:
 - Envío de valores monetarios al backend como números limpios
 - Selector de fecha y hora de cargue compatible con Expo Go
 - Fallback web para fecha y hora usando campos controlados
+- Tipo de vehículo en creación, listado y detalle de viajes
+- Tipo de vehículo obligatorio al crear y editar conductores
+- Comparación visual entre vehículo requerido del viaje y vehículo del conductor
 - Sección documental reorganizada en el detalle dispatcher/admin
 - Sección documental reorganizada en el detalle conductor
 - Cierre de viaje visible junto al resumen documental
@@ -144,6 +147,17 @@ Si una empresa no tiene plantillas activas, TrazaCargo usa los requisitos base:
 5. Crea el viaje.
 6. Abre el detalle y confirma que la fecha de cargue muestra fecha y hora en español.
 
+## Probar tipo de vehículo
+
+1. Entra como dispatcher/admin.
+2. Abre `Crear viaje`.
+3. Escribe un `Tipo de vehículo`, por ejemplo `Tractomula`.
+4. Crea el viaje y confirma que el detalle muestra el tipo requerido.
+5. Abre `Conductores`.
+6. Intenta crear un conductor sin `Tipo de vehículo` y confirma que no se guarda.
+7. Crea un conductor con `Tipo de vehículo` y sin placa.
+8. Abre un viaje y confirma que al ofertarlo puedes comparar el tipo requerido del viaje con el tipo de cada conductor.
+
 ## Probar nueva UX documental
 
 1. Entra al detalle de un viaje como dispatcher/admin.
@@ -163,7 +177,7 @@ Si una empresa no tiene plantillas activas, TrazaCargo usa los requisitos base:
 
 1. Entra como dispatcher/admin.
 2. Abre `Conductores`.
-3. Crea un conductor o edita nombre, teléfono y documento.
+3. Crea un conductor con tipo de vehículo o edita nombre, teléfono, documento y tipo de vehículo.
 4. Usa `Desactivar conductor` para impedir nuevas ofertas.
 5. Usa `Reactivar conductor` para volver a dejarlo disponible.
 6. Los viajes históricos del conductor siguen visibles.
@@ -213,6 +227,9 @@ Las pruebas cubren:
 - Historial documental
 - Bloqueo de ofertas a conductores desactivados
 - Ofertas permitidas a conductores activos
+- Persistencia de tipo de vehículo en viajes
+- Tipo de vehículo requerido al crear conductores
+- Sincronización del tipo de vehículo con el vehículo asociado cuando existe
 
 ## Verificación antes de reportar
 
@@ -301,6 +318,7 @@ Para ejecutar builds necesitas una cuenta Expo/EAS. iOS puede requerir Apple Dev
 - No se cambia el flujo RNDC, pagos, OCR, GPS, push notifications ni offline.
 - La validación de tipo de archivo usa metadata de la plataforma, no inspección binaria.
 - EAS queda configurado, pero los builds internos requieren login y configuración de cuenta.
+- No hay migración ni backfill para tipo de vehículo. En desarrollo, limpia y vuelve a sembrar datos demo si necesitas registros consistentes.
 
 ## Próxima fase sugerida
 

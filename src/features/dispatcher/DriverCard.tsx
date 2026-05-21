@@ -29,6 +29,7 @@ type DriverCardDriver = {
   fullName: string;
   phone: string;
   documentNumber: string;
+  vehicleType?: string;
   status: string;
   vehicle: {
     plate: string;
@@ -41,7 +42,7 @@ type DriverCardProps = {
   onGenerateAccessCode?: (driverId: Id<'drivers'>) => void;
   onUpdateDriver?: (
     driverId: Id<'drivers'>,
-    input: { fullName: string; phone: string; documentNumber: string },
+    input: { fullName: string; phone: string; documentNumber: string; vehicleType: string },
   ) => Promise<void>;
   onUpdateStatus?: (driverId: Id<'drivers'>, status: 'ACTIVE' | 'DISABLED') => Promise<void>;
   generating?: boolean;
@@ -62,9 +63,14 @@ export function DriverCard({
   const [fullName, setFullName] = useState(driver.fullName);
   const [phone, setPhone] = useState(driver.phone);
   const [documentNumber, setDocumentNumber] = useState(driver.documentNumber);
+  const [vehicleType, setVehicleType] = useState(driver.vehicleType ?? driver.vehicle?.vehicleType ?? '');
   const [error, setError] = useState<string | undefined>();
 
   const isActive = driver.status === 'ACTIVE';
+  const displayedVehicleType = driver.vehicleType ?? driver.vehicle?.vehicleType;
+  const displayedVehicle = driver.vehicle?.plate
+    ? `${driver.vehicle.plate} · ${displayedVehicleType ?? 'No registrado'}`
+    : displayedVehicleType;
   const initials = driver.fullName
     .split(' ')
     .slice(0, 2)
@@ -77,19 +83,20 @@ export function DriverCard({
     setFullName(driver.fullName);
     setPhone(driver.phone);
     setDocumentNumber(driver.documentNumber);
+    setVehicleType(driver.vehicleType ?? driver.vehicle?.vehicleType ?? '');
     setError(undefined);
   };
 
   const handleSave = async () => {
     if (!onUpdateDriver) return;
 
-    if (!fullName.trim() || !phone.trim() || !documentNumber.trim()) {
-      setError('Completa nombre, teléfono y documento.');
+    if (!fullName.trim() || !phone.trim() || !documentNumber.trim() || !vehicleType.trim()) {
+      setError('Completa nombre, teléfono, documento y tipo de vehículo.');
       return;
     }
 
     setError(undefined);
-    await onUpdateDriver(driver._id, { fullName, phone, documentNumber });
+    await onUpdateDriver(driver._id, { fullName, phone, documentNumber, vehicleType });
     setEditing(false);
   };
 
@@ -139,17 +146,17 @@ export function DriverCard({
           </View>
 
           <View style={styles.metaRow}>
-            {driver.vehicle ? (
+            {displayedVehicle ? (
               <>
                 <Feather name="truck" size={13} color={palette.neutral400} />
                 <Text style={styles.metaText} numberOfLines={1}>
-                  {driver.vehicle.plate} · {driver.vehicle.vehicleType}
+                  {displayedVehicle}
                 </Text>
               </>
             ) : (
               <>
                 <Feather name="circle" size={13} color={palette.neutral300} />
-                <Text style={styles.metaEmpty}>Sin vehículo registrado</Text>
+                <Text style={styles.metaEmpty}>Tipo no registrado</Text>
               </>
             )}
           </View>
@@ -162,6 +169,7 @@ export function DriverCard({
           <AppInput label="Nombre completo" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
           <AppInput label="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           <AppInput label="Documento" value={documentNumber} onChangeText={setDocumentNumber} keyboardType="number-pad" />
+          <AppInput label="Tipo de vehículo" value={vehicleType} onChangeText={setVehicleType} autoCapitalize="words" />
           <AppButton label="Guardar cambios" onPress={handleSave} loading={updating} fullWidth />
           <AppButton label="Descartar" variant="secondary" onPress={handleCancel} disabled={updating} fullWidth />
         </View>

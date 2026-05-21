@@ -155,7 +155,10 @@ export default function DispatcherTripDetailScreen() {
   const canOffer = !detail.trip.acceptedByDriverId && detail.trip.status !== 'CANCELLED' && detail.trip.status !== 'CLOSED';
   const canCancel = detail.trip.status !== 'CANCELLED' && detail.trip.status !== 'CLOSED';
   const activeDrivers = drivers.filter((driver) => driver.status === 'ACTIVE');
-  const driverName = detail.acceptedDriver?.fullName ?? detail.assignedDriver?.fullName ?? 'Sin conductor';
+  const selectedDriver = detail.acceptedDriver ?? detail.assignedDriver;
+  const driverName = selectedDriver?.fullName ?? 'Sin conductor';
+  const driverVehicleType = selectedDriver?.vehicleType ?? 'No registrado';
+  const tripVehicleType = detail.trip.vehicleType ?? 'No registrado';
   const documents = detail.documents as TripDocumentView[];
   const requirements = detail.documentRequirements as DocumentRequirementView[];
   const companyDocuments = documents.filter((document) => document.direction === 'COMPANY_TO_DRIVER');
@@ -234,6 +237,14 @@ export default function DispatcherTripDetailScreen() {
                 <Text style={styles.dataValue}>{driverName}</Text>
               </View>
               <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Vehículo del viaje</Text>
+                <Text style={styles.dataValue}>{tripVehicleType}</Text>
+              </View>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Vehículo conductor</Text>
+                <Text style={styles.dataValue}>{driverVehicleType}</Text>
+              </View>
+              <View style={styles.dataRow}>
                 <Text style={styles.dataLabel}>Carga</Text>
                 <Text style={styles.dataValue}>{detail.trip.cargoDescription}</Text>
               </View>
@@ -263,6 +274,7 @@ export default function DispatcherTripDetailScreen() {
 
             {canOffer ? (
               <TripOfferPanel
+                tripVehicleType={detail.trip.vehicleType}
                 drivers={activeDrivers}
                 offers={detail.offers}
                 selectedDriverIds={selectedDriverIds}
@@ -278,7 +290,12 @@ export default function DispatcherTripDetailScreen() {
                 ) : null}
                 {detail.offers.map((offer) => (
                   <View key={offer._id} style={styles.offerRow}>
-                    <Text style={styles.offerDriver}>{offer.driver.fullName}</Text>
+                    <View style={styles.offerDriverBlock}>
+                      <Text style={styles.offerDriver}>{offer.driver.fullName}</Text>
+                      <Text style={styles.offerVehicle}>
+                        Vehículo: {offer.driver.vehicleType || 'No registrado'}
+                      </Text>
+                    </View>
                     <StatusBadge status={offer.status} />
                   </View>
                 ))}
@@ -453,6 +470,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.textPrimary,
     flex: 1,
+  },
+  offerDriverBlock: {
+    flex: 1,
+    gap: spacing[1],
+  },
+  offerVehicle: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
   },
   cancelActions: {
     gap: spacing[3],

@@ -37,6 +37,7 @@ const driverFields = {
   fullName: v.string(),
   phone: v.string(),
   documentNumber: v.string(),
+  vehicleType: v.optional(v.string()),
   status: driverStatusValidator,
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -112,6 +113,7 @@ export const listForCurrentCompany = query({
     return drivers
       .map((driver) => ({
         ...driver,
+        vehicleType: driver.vehicleType ?? vehiclesByDriverId.get(driver._id)?.vehicleType,
         vehicle: vehiclesByDriverId.get(driver._id) ?? null,
       }))
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -124,7 +126,7 @@ export const createForCurrentCompany = mutation({
     phone: v.string(),
     documentNumber: v.string(),
     vehiclePlate: v.optional(v.string()),
-    vehicleType: v.optional(v.string()),
+    vehicleType: v.string(),
   },
   returns: v.object({
     driver: driverReturn,
@@ -137,10 +139,10 @@ export const createForCurrentCompany = mutation({
     const phone = args.phone.trim();
     const documentNumber = args.documentNumber.trim();
     const vehiclePlate = args.vehiclePlate?.trim().toUpperCase();
-    const vehicleType = args.vehicleType?.trim();
+    const vehicleType = args.vehicleType.trim();
 
-    if (!fullName || !phone || !documentNumber) {
-      throw new ConvexError("Completa nombre, teléfono y documento.");
+    if (!fullName || !phone || !documentNumber || !vehicleType) {
+      throw new ConvexError("Completa nombre, teléfono, documento y tipo de vehículo.");
     }
 
     const existingDrivers = await ctx.db
@@ -160,12 +162,13 @@ export const createForCurrentCompany = mutation({
       fullName,
       phone,
       documentNumber,
+      vehicleType,
       status: "ACTIVE",
       createdAt: now,
       updatedAt: now,
     });
     const vehicleId =
-      vehiclePlate && vehicleType
+      vehiclePlate
         ? await ctx.db.insert("vehicles", {
             companyId: profile.companyId,
             driverId,
@@ -224,6 +227,7 @@ export const updateDriverForCurrentCompany = mutation({
     fullName: v.optional(v.string()),
     phone: v.optional(v.string()),
     documentNumber: v.optional(v.string()),
+    vehicleType: v.optional(v.string()),
   },
   returns: driverReturn,
   handler: async (ctx, args) => {
@@ -244,6 +248,10 @@ export const updateDriverForCurrentCompany = mutation({
     const documentNumber = normalizeOptionalDriverText(
       args.documentNumber,
       "Ingresa el documento del conductor.",
+    );
+    const vehicleType = normalizeOptionalDriverText(
+      args.vehicleType,
+      "Ingresa el tipo de vehículo.",
     );
 
     if (documentNumber && documentNumber !== driver.documentNumber) {
@@ -266,8 +274,23 @@ export const updateDriverForCurrentCompany = mutation({
       fullName: fullName ?? driver.fullName,
       phone: phone ?? driver.phone,
       documentNumber: documentNumber ?? driver.documentNumber,
+      vehicleType: vehicleType ?? driver.vehicleType,
       updatedAt: Date.now(),
     });
+
+    if (vehicleType) {
+      const vehicle = await ctx.db
+        .query("vehicles")
+        .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+        .first();
+
+      if (vehicle) {
+        await ctx.db.patch(vehicle._id, {
+          vehicleType,
+          updatedAt: Date.now(),
+        });
+      }
+    }
     const updatedDriver = await ctx.db.get(driver._id);
 
     if (!updatedDriver) {

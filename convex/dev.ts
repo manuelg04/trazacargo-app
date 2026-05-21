@@ -15,12 +15,14 @@ const demoDrivers = [
     fullName: 'Carlos Rueda',
     phone: '3001234567',
     documentNumber: '1098765432',
+    vehicleType: 'Tractomula',
     accessCode: 'TC-CARLOS-2026',
   },
   {
     fullName: 'Julian Mendoza',
     phone: '3107654321',
     documentNumber: '1023456789',
+    vehicleType: 'Camión sencillo',
     accessCode: 'TC-JULIAN-2026',
   },
 ] as const;
@@ -66,6 +68,7 @@ export const seedDemoData = mutation({
       pickupAt: now + 1000 * 60 * 60 * 8,
       deliveryEta: now + 1000 * 60 * 60 * 36,
       cargoDescription: 'Alimentos secos paletizados',
+      vehicleType: 'Tractomula',
       freightValue: 4200000,
       advanceValue: 1200000,
       status: 'OFFERED',
@@ -80,6 +83,7 @@ export const seedDemoData = mutation({
       pickupAt: now - 1000 * 60 * 60 * 3,
       deliveryEta: now + 1000 * 60 * 60 * 28,
       cargoDescription: 'Material industrial empacado',
+      vehicleType: 'Tractomula',
       freightValue: 3900000,
       advanceValue: 1000000,
       assignedDriverId: firstDriverResult.driverId,
@@ -96,6 +100,7 @@ export const seedDemoData = mutation({
       pickupAt: now + 1000 * 60 * 60 * 14,
       deliveryEta: now + 1000 * 60 * 60 * 30,
       cargoDescription: 'Insumos de construcción',
+      vehicleType: 'Camión sencillo',
       freightValue: 2600000,
       advanceValue: 750000,
       status: 'OFFERED',
@@ -345,6 +350,7 @@ async function getOrCreateDemoDriver(
     fullName: driver.fullName,
     phone: driver.phone,
     documentNumber: driver.documentNumber,
+    vehicleType: driver.vehicleType,
     status: 'ACTIVE',
     createdAt: now,
     updatedAt: now,
@@ -385,6 +391,7 @@ type DemoTripInput = {
   pickupAt: number;
   deliveryEta: number;
   cargoDescription: string;
+  vehicleType: string;
   freightValue: number;
   advanceValue: number;
   assignedDriverId?: Id<'drivers'>;
@@ -415,6 +422,7 @@ async function getOrCreateDemoTrip(ctx: MutationCtx, input: DemoTripInput) {
     pickupAt: input.pickupAt,
     deliveryEta: input.deliveryEta,
     cargoDescription: input.cargoDescription,
+    vehicleType: input.vehicleType,
     freightValue: input.freightValue,
     advanceValue: input.advanceValue,
     assignedDriverId: input.assignedDriverId,

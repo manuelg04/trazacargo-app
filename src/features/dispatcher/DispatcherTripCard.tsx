@@ -35,9 +35,10 @@ type DispatcherTripCardTrip = {
   freightValue?: number;
   advanceValue?: number;
   cargoDescription: string;
+  vehicleType?: string;
   status: string;
-  acceptedDriver: { fullName: string } | null;
-  assignedDriver: { fullName: string } | null;
+  acceptedDriver: { fullName: string; vehicleType?: string } | null;
+  assignedDriver: { fullName: string; vehicleType?: string } | null;
   offerCount: number;
   pendingOfferCount: number;
   documentSummary?: DocumentSummary;
@@ -50,6 +51,7 @@ type DispatcherTripCardProps = {
 
 export function DispatcherTripCard({ trip, onView }: DispatcherTripCardProps) {
   const driver = trip.acceptedDriver?.fullName ?? trip.assignedDriver?.fullName;
+  const driverVehicleType = trip.acceptedDriver?.vehicleType ?? trip.assignedDriver?.vehicleType;
   const statusTone = getStatusTone(trip.status);
   const docTone = trip.documentSummary ? getDocTone(trip.documentSummary, trip.status) : null;
 
@@ -87,6 +89,15 @@ export function DispatcherTripCard({ trip, onView }: DispatcherTripCardProps) {
 
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
+            <Feather name="truck" size={13} color={trip.vehicleType ? palette.neutral400 : palette.neutral300} />
+            <Text style={[styles.metaText, !trip.vehicleType ? styles.metaMuted : null]} numberOfLines={1}>
+              Viaje: {trip.vehicleType || 'No registrado'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
             <Feather name="dollar-sign" size={13} color={trip.freightValue ? palette.neutral400 : palette.neutral300} />
             {trip.freightValue ? (
               <Text style={[styles.metaText, styles.metaStrong]}>{formatCurrency(trip.freightValue)}</Text>
@@ -97,7 +108,9 @@ export function DispatcherTripCard({ trip, onView }: DispatcherTripCardProps) {
           <View style={[styles.metaItem, styles.metaItemFlex]}>
             <Feather name="user" size={13} color={driver ? palette.neutral400 : palette.neutral300} />
             {driver ? (
-              <Text style={styles.metaText} numberOfLines={1}>{driver}</Text>
+              <Text style={styles.metaText} numberOfLines={1}>
+                {driver}{driverVehicleType ? ` · ${driverVehicleType}` : ' · Tipo no registrado'}
+              </Text>
             ) : (
               <Text style={[styles.metaText, styles.metaMuted]} numberOfLines={1}>Sin asignar</Text>
             )}

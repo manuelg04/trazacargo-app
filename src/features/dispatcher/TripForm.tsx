@@ -25,6 +25,7 @@ export type TripFormValues = {
   pickupAt: string;
   deliveryEta?: string;
   cargoDescription: string;
+  vehicleType?: string;
   freightValue?: number;
   advanceValue?: number;
   observations?: string;
@@ -42,6 +43,7 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
   const [pickupAt, setPickupAt] = useState<string | undefined>();
   const [deliveryEta, setDeliveryEta] = useState<string | undefined>();
   const [cargoDescription, setCargoDescription] = useState('');
+  const [vehicleType, setVehicleType] = useState('');
   const [freightValue, setFreightValue] = useState('');
   const [advanceValue, setAdvanceValue] = useState('');
   const [observations, setObservations] = useState('');
@@ -68,6 +70,7 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
       pickupAt: pickupAt ?? '',
       deliveryEta,
       cargoDescription,
+      vehicleType: vehicleType.trim() || undefined,
       freightValue: parseMoneyInputToNumber(freightValue),
       advanceValue: parseMoneyInputToNumber(advanceValue),
       observations,
@@ -127,6 +130,14 @@ export function TripForm({ loading = false, onSubmit }: TripFormProps) {
         autoCapitalize="sentences"
         multiline
         error={errors.cargoDescription}
+      />
+
+      <AppInput
+        label="Tipo de vehículo"
+        value={vehicleType}
+        onChangeText={setVehicleType}
+        autoCapitalize="words"
+        placeholder="Tractomula, camión sencillo, furgón..."
       />
 
       <View style={styles.divider} />
