@@ -1,12 +1,14 @@
 import { useAuthActions, useConvexAuth } from '@convex-dev/auth/react';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
+import { KeyboardAwareScrollView } from '@/src/components/KeyboardAwareScrollView';
 import { AuthForm } from '@/src/features/auth/AuthForm';
+import { getKeyboardAwareBottomPadding } from '@/src/utils/keyboardAwareScroll';
 
 export default function SignUpScreen() {
   const { signIn } = useAuthActions();
@@ -53,11 +55,10 @@ export default function SignUpScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.bottomZone}
         contentContainerStyle={styles.formContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
+        keyboardShouldPersistTaps="handled">
         <Text style={styles.heading}>Crear cuenta</Text>
         <AuthForm
           mode="signUp"
@@ -66,7 +67,7 @@ export default function SignUpScreen() {
           onSubmit={handleSubmit}
           onSwitchMode={() => router.replace('/(auth)/sign-in')}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -130,6 +131,7 @@ const styles = StyleSheet.create({
   formContent: {
     gap: spacing[5],
     padding: spacing[6],
+    paddingBottom: getKeyboardAwareBottomPadding(spacing[6]),
   },
   heading: {
     color: colors.textPrimary,

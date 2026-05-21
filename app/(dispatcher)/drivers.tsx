@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/convex/_generated/api';
@@ -9,8 +9,10 @@ import { fontFamily } from '@/constants/theme';
 import { AppEmptyState } from '@/src/components/AppEmptyState';
 import { AppInput } from '@/src/components/AppInput';
 import { AppLoading } from '@/src/components/AppLoading';
+import { KeyboardAwareScrollView } from '@/src/components/KeyboardAwareScrollView';
 import { DriverCard } from '@/src/features/dispatcher/DriverCard';
 import { getActionErrorMessage } from '@/src/utils/getActionErrorMessage';
+import { getKeyboardAwareBottomPadding } from '@/src/utils/keyboardAwareScroll';
 
 const palette = {
   green800: '#1A5C38',
@@ -131,10 +133,9 @@ export default function DispatcherDriversScreen() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.scroll}
           contentContainerStyle={styles.body}
-          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
           {showForm ? (
             <View style={styles.formHeader}>
@@ -287,7 +288,7 @@ export default function DispatcherDriversScreen() {
               />
             </View>
           ) : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </View>
   );
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: 14,
     paddingTop: 8,
-    paddingBottom: 40,
+    paddingBottom: getKeyboardAwareBottomPadding(40),
     gap: 14,
   },
   listHeader: {

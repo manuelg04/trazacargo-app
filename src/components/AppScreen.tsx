@@ -1,7 +1,9 @@
 import { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '@/constants/theme';
+import { KeyboardAwareScrollView } from '@/src/components/KeyboardAwareScrollView';
+import { getKeyboardAwareBottomPadding } from '@/src/utils/keyboardAwareScroll';
 
 type AppScreenProps = {
   children: ReactNode;
@@ -21,12 +23,11 @@ export function AppScreen({ children, scroll = true, contentStyle }: AppScreenPr
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       {scroll ? (
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+          keyboardShouldPersistTaps="handled">
           {content}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
         content
       )}
@@ -45,5 +46,6 @@ const styles = StyleSheet.create({
   content: {
     gap: spacing[4],
     padding: spacing[4],
+    paddingBottom: getKeyboardAwareBottomPadding(spacing[4]),
   },
 });

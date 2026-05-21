@@ -2,15 +2,17 @@ import { useAuthActions } from '@convex-dev/auth/react';
 import { useMutation } from 'convex/react';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
 import { copy } from '@/constants/copy';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
+import { KeyboardAwareScrollView } from '@/src/components/KeyboardAwareScrollView';
 import { useCurrentProfile } from '@/src/features/auth/useCurrentProfile';
 import { AccessCodeForm } from '@/src/features/onboarding/AccessCodeForm';
+import { getKeyboardAwareBottomPadding } from '@/src/utils/keyboardAwareScroll';
 
 export default function AccessCodeScreen() {
   const { signOut } = useAuthActions();
@@ -71,11 +73,10 @@ export default function AccessCodeScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.bottomZone}
         contentContainerStyle={styles.formContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
+        keyboardShouldPersistTaps="handled">
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
             Ingresa el código de acceso que te entregó la empresa de transporte.
@@ -87,7 +88,7 @@ export default function AccessCodeScreen() {
         <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
           <Text style={styles.signOutText}>Cerrar sesión</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -135,6 +136,7 @@ const styles = StyleSheet.create({
   formContent: {
     gap: spacing[4],
     padding: spacing[6],
+    paddingBottom: getKeyboardAwareBottomPadding(spacing[6]),
   },
   infoBox: {
     backgroundColor: colors.infoBg,

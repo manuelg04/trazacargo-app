@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { fontFamily } from '@/constants/theme';
+import { getDrumValueFromOffset } from '@/src/utils/drumPicker';
 
 const palette = {
   green800: '#1A5C38',
@@ -107,8 +108,9 @@ export function DateTimePickerSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
+        <View style={styles.sheet}>
           <View style={styles.handle} />
 
           <View style={styles.headerBlock}>
@@ -202,8 +204,8 @@ export function DateTimePickerSheet({
           <Pressable onPress={handleConfirm} style={styles.confirmBtn} accessibilityRole="button">
             <Text style={styles.confirmText}>Confirmar</Text>
           </Pressable>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -219,6 +221,13 @@ function DrumPicker({ values, selected, onChange, pad }: DrumPickerProps) {
   const scrollRef = useRef<ScrollView>(null);
   const selectedIndex = Math.max(0, values.indexOf(selected));
 
+  const handleScrollEnd = (offsetY: number) => {
+    const value = getDrumValueFromOffset(values, offsetY, HOUR_ITEM_HEIGHT);
+    if (value !== undefined) {
+      onChange(value);
+    }
+  };
+
   useEffect(() => {
     const id = setTimeout(() => {
       scrollRef.current?.scrollTo({ y: selectedIndex * HOUR_ITEM_HEIGHT, animated: false });
@@ -230,14 +239,14 @@ function DrumPicker({ values, selected, onChange, pad }: DrumPickerProps) {
     <View style={styles.drum}>
       <ScrollView
         ref={scrollRef}
+        nestedScrollEnabled
         showsVerticalScrollIndicator={false}
         snapToInterval={HOUR_ITEM_HEIGHT}
         decelerationRate="fast"
         contentContainerStyle={{ paddingVertical: HOUR_ITEM_HEIGHT }}
+        onScrollEndDrag={(e) => handleScrollEnd(e.nativeEvent.contentOffset.y)}
         onMomentumScrollEnd={(e) => {
-          const idx = Math.round(e.nativeEvent.contentOffset.y / HOUR_ITEM_HEIGHT);
-          const clamped = Math.max(0, Math.min(values.length - 1, idx));
-          onChange(values[clamped]);
+          handleScrollEnd(e.nativeEvent.contentOffset.y);
         }}>
         {values.map((v, i) => {
           const isSel = i === selectedIndex;
@@ -328,6 +337,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.overlay,
     justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   sheet: {
     backgroundColor: palette.white,

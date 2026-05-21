@@ -1,12 +1,14 @@
 import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/convex/_generated/api';
 import { fontFamily } from '@/constants/theme';
+import { KeyboardAwareScrollView } from '@/src/components/KeyboardAwareScrollView';
 import { TripForm, TripFormValues } from '@/src/features/dispatcher/TripForm';
+import { getKeyboardAwareBottomPadding } from '@/src/utils/keyboardAwareScroll';
 
 const palette = {
   green800: '#1A5C38',
@@ -43,9 +45,8 @@ export default function CreateTripScreen() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
           <Pressable
             onPress={() => router.back()}
@@ -64,7 +65,7 @@ export default function CreateTripScreen() {
           ) : null}
 
           <TripForm loading={saving} onSubmit={handleSubmit} />
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </View>
   );
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 14,
     paddingTop: 8,
-    paddingBottom: 32,
+    paddingBottom: getKeyboardAwareBottomPadding(32),
     gap: 14,
   },
   backBtn: {

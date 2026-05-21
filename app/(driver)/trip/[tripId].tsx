@@ -1,4 +1,4 @@
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,6 +11,7 @@ import { AppErrorState } from '@/src/components/AppErrorState';
 import { AppInput } from '@/src/components/AppInput';
 import { AppLoading } from '@/src/components/AppLoading';
 import { AppScreen } from '@/src/components/AppScreen';
+import { KeyboardAwareScrollView } from '@/src/components/KeyboardAwareScrollView';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { operationalEventActions, TripEventType } from '@/src/constants/tripEvents';
 import { TripDocumentView } from '@/src/features/documents/DocumentCard';
@@ -21,6 +22,7 @@ import { TripEventTimeline } from '@/src/features/trips/TripEventTimeline';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { formatCurrency } from '@/src/utils/formatCurrency';
 import { formatDate } from '@/src/utils/formatDate';
+import { getKeyboardAwareBottomPadding } from '@/src/utils/keyboardAwareScroll';
 
 type TabKey = 'info' | 'docs' | 'events' | 'actions';
 
@@ -151,10 +153,9 @@ export default function TripDetailScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         key={activeTab}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
 
         {activeTab === 'info' ? (
@@ -280,7 +281,7 @@ export default function TripDetailScreen() {
             </AppCard>
           )
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -320,6 +321,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: spacing[4],
+    paddingBottom: getKeyboardAwareBottomPadding(spacing[4]),
     gap: spacing[4],
   },
   tabContent: {
