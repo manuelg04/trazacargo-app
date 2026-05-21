@@ -25,6 +25,7 @@ import {
   defaultCompanyDocumentRequirementTemplates,
   listActiveTemplatesForCompany,
 } from './companyDocumentRequirementTemplates';
+import { queuePushNotification } from './pushNotifications';
 
 type RequirementCtx = QueryCtx | MutationCtx;
 type RequirementDirection = Doc<'tripDocumentRequirements'>['direction'];
@@ -147,6 +148,7 @@ export const waiveForTripByDispatcher = mutation({
     const requirement = await getRequirementForDispatcher(ctx, args.requirementId, profile.companyId);
     const waiverReason = assertRequiredText(args.waiverReason, 'Ingresa el motivo de exención.');
     const now = Date.now();
+    const beforeSummary = await computeTripDocumentSummary(ctx, requirement.tripId);
 
     await ctx.db.patch(requirement._id, {
       status: 'WAIVED',
@@ -165,6 +167,17 @@ export const waiveForTripByDispatcher = mutation({
       note: waiverReason,
       createdAt: now,
     });
+
+    const afterSummary = await computeTripDocumentSummary(ctx, requirement.tripId);
+
+    if (!beforeSummary.isComplete && afterSummary.isComplete) {
+      await queuePushNotification(ctx, {
+        kind: 'documentation_complete',
+        companyId: requirement.companyId,
+        tripId: requirement.tripId,
+        target: 'dispatcher_admins',
+      });
+    }
 
     const updatedRequirement = await ctx.db.get(requirement._id);
 

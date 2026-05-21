@@ -34,6 +34,20 @@ Promesa del producto:
 - Diagnóstico documental en `docs/document-ux-audit.md`
 - Pruebas unitarias para helpers de dinero y fecha/hora
 
+## Qué incluye la fase push inicial
+
+- Registro del Expo Push Token del usuario autenticado con perfil activo
+- Guardado de tokens en Convex asociados al perfil actual
+- Registro seguro en web como no-op
+- Canal Android `viajes` para notificaciones
+- Tokens duplicados evitados por perfil y token
+- Tokens reasignados desactivando asociaciones anteriores del mismo token
+- Logs en `notificationEvents` para eventos en cola, enviados, omitidos y fallidos
+- Desactivación de tokens cuando Expo devuelve `DeviceNotRegistered`
+- Receipts de Expo consultados después del envío cuando hay tickets
+- Notificaciones para oferta nueva, viaje aceptado, documento subido, documento revisado y documentación completa
+- Navegación segura al tocar notificaciones según tipo de evento y rol actual
+
 ## Instalar
 
 ```bash
@@ -194,6 +208,24 @@ Si una empresa no tiene plantillas activas, TrazaCargo usa los requisitos base:
 7. Si un documento fue rechazado, reenvíalo desde el conductor.
 8. Cierra el viaje cuando los documentos obligatorios estén cumplidos o eximidos.
 
+## Probar push notifications
+
+1. Ejecuta `npx convex dev`.
+2. Ejecuta la app con una build interna o development build para Android. No uses Expo Go como prueba final de push remotas Android.
+3. Inicia sesión como conductor y confirma que aparece un registro activo en `pushTokens`.
+4. Inicia sesión como dispatcher/admin en otro usuario o dispositivo y confirma su token.
+5. Desde dispatcher/admin, oferta un viaje al conductor.
+6. Confirma que el conductor recibe `Nuevo viaje disponible`.
+7. Desde conductor, acepta la oferta.
+8. Confirma que dispatcher/admin recibe `Viaje aceptado`.
+9. Desde conductor, sube un documento.
+10. Confirma que dispatcher/admin recibe `Documento recibido`.
+11. Desde dispatcher/admin, aprueba o rechaza el documento.
+12. Confirma que el conductor recibe `Documento aprobado` o `Documento rechazado`.
+13. Completa o exime todos los requisitos obligatorios.
+14. Confirma que dispatcher/admin recibe `Documentación completa`.
+15. Revisa `notificationEvents` en Convex para ver estados, tickets, errores y claves de evento.
+
 ## Pruebas automatizadas
 
 Para correr las pruebas una vez:
@@ -230,6 +262,10 @@ Las pruebas cubren:
 - Persistencia de tipo de vehículo en viajes
 - Tipo de vehículo requerido al crear conductores
 - Sincronización del tipo de vehículo con el vehículo asociado cuando existe
+- Mensajes seguros de push notifications
+- Claves de evento para evitar duplicados obvios
+- Troceo de mensajes hacia Expo Push Service
+- Sufijos de token para logs sin exponer el token completo
 
 ## Verificación antes de reportar
 
@@ -284,7 +320,6 @@ Para ejecutar builds necesitas una cuenta Expo/EAS. iOS puede requerir Apple Dev
 
 - GPS
 - Tracking en vivo
-- Push notifications
 - OCR o IA
 - Firma digital
 - Facturación electrónica
@@ -315,10 +350,13 @@ Para ejecutar builds necesitas una cuenta Expo/EAS. iOS puede requerir Apple Dev
 - La subida usa un archivo por acción, sin multiarchivo por lote.
 - La cámara y el selector dependen de permisos y comportamiento de Expo Go en cada plataforma.
 - El picker nativo de fecha/hora aplica a iOS y Android; web usa fallback controlado.
-- No se cambia el flujo RNDC, pagos, OCR, GPS, push notifications ni offline.
+- No se cambia el flujo RNDC, pagos, OCR, GPS ni offline.
 - La validación de tipo de archivo usa metadata de la plataforma, no inspección binaria.
 - EAS queda configurado, pero los builds internos requieren login y configuración de cuenta.
 - No hay migración ni backfill para tipo de vehículo. En desarrollo, limpia y vuelve a sembrar datos demo si necesitas registros consistentes.
+- Push remotas Android deben validarse en build interna o development build, no solo en Expo Go.
+- No hay preferencias de notificación por usuario en esta fase.
+- No hay pantalla administrativa de logs; se revisan en Convex.
 
 ## Próxima fase sugerida
 

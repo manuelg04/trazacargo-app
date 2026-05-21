@@ -23,6 +23,7 @@ import {
   requireDispatcherOrAdminProfile,
   requireDriverProfile,
 } from './lib/permissions';
+import { queuePushNotification } from './pushNotifications';
 
 const companyReturn = v.object({
   _id: v.id('companies'),
@@ -320,6 +321,13 @@ export const acceptOfferForCurrentDriver = mutation({
       }
 
       await ensureTripAcceptedEvent(ctx, trip.companyId, args.tripId, driverId, now);
+      await queuePushNotification(ctx, {
+        kind: 'trip_accepted',
+        companyId: trip.companyId,
+        tripId: args.tripId,
+        driverId,
+        target: 'dispatcher_admins',
+      });
 
       return null;
     }
@@ -370,6 +378,13 @@ export const acceptOfferForCurrentDriver = mutation({
     }
 
     await ensureTripAcceptedEvent(ctx, trip.companyId, args.tripId, driverId, now);
+    await queuePushNotification(ctx, {
+      kind: 'trip_accepted',
+      companyId: trip.companyId,
+      tripId: args.tripId,
+      driverId,
+      target: 'dispatcher_admins',
+    });
 
     return null;
   },
@@ -664,6 +679,7 @@ export const offerToDriversForDispatcher = mutation({
 
     const now = Date.now();
     const uniqueDriverIds = Array.from(new Set(args.driverIds));
+    const createdOffers: { offerId: Id<'tripOffers'>; driverId: Id<'drivers'> }[] = [];
     let createdCount = 0;
     let skippedCount = 0;
 
@@ -678,7 +694,7 @@ export const offerToDriversForDispatcher = mutation({
       if (existingOffer) {
         skippedCount += 1;
       } else {
-        await ctx.db.insert('tripOffers', {
+        const offerId = await ctx.db.insert('tripOffers', {
           companyId: profile.companyId,
           tripId: args.tripId,
           driverId,
@@ -686,6 +702,7 @@ export const offerToDriversForDispatcher = mutation({
           createdAt: now,
           updatedAt: now,
         });
+        createdOffers.push({ offerId, driverId });
         createdCount += 1;
       }
     }
@@ -694,6 +711,18 @@ export const offerToDriversForDispatcher = mutation({
       await ctx.db.patch(args.tripId, {
         status: 'OFFERED',
         updatedAt: now,
+      });
+    }
+
+    for (const createdOffer of createdOffers) {
+      await queuePushNotification(ctx, {
+        kind: 'new_trip_available',
+        companyId: profile.companyId,
+        tripId: args.tripId,
+        driverIds: [createdOffer.driverId],
+        driverId: createdOffer.driverId,
+        offerId: createdOffer.offerId,
+        target: 'drivers',
       });
     }
 

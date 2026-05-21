@@ -20,12 +20,14 @@ import {
   requireDriverProfile,
 } from './lib/permissions';
 import {
+  computeTripDocumentSummary,
   updateRequirementAfterDocumentApproved,
   updateRequirementAfterDocumentCreated,
   updateRequirementAfterDocumentRejected,
   validateRequirementForDocument,
 } from './tripDocumentRequirements';
 import { createTripDocumentReviewEvent } from './tripDocumentReviewEvents';
+import { queuePushNotification } from './pushNotifications';
 
 export const generateUploadUrlForCurrentUser = mutation({
   args: {
@@ -138,7 +140,7 @@ export const createDriverDocumentForTrip = mutation({
   },
   returns: tripDocumentWithUrlReturn,
   handler: async (ctx, args) => {
-    const { userId, profile } = await requireDriverProfile(ctx);
+    const { userId, profile, driverId } = await requireDriverProfile(ctx);
     const { trip, belongsToDriver } = await assertDriverCanAccessTrip(ctx, profile, args.tripId);
     const displayName = assertRequiredText(args.displayName, 'Ingresa un nombre para el documento.');
     const originalFileName = assertRequiredText(args.originalFileName, 'El archivo debe tener nombre.');
@@ -219,6 +221,15 @@ export const createDriverDocumentForTrip = mutation({
       eventType: args.parentDocumentId || matchedRequirementStatus === 'REJECTED' ? 'DOCUMENT_RESUBMITTED' : 'DOCUMENT_SUBMITTED',
       createdAt: now,
     });
+    await queuePushNotification(ctx, {
+      kind: 'driver_document_uploaded',
+      companyId: trip.companyId,
+      tripId: args.tripId,
+      driverId,
+      documentId,
+      requirementId: resolvedRequirementId,
+      target: 'dispatcher_admins',
+    });
 
     const document = await ctx.db.get(documentId);
 
@@ -270,6 +281,7 @@ export const approveDriverDocument = mutation({
     }
 
     const now = Date.now();
+    const beforeSummary = await computeTripDocumentSummary(ctx, document.tripId);
 
     await ctx.db.patch(args.documentId, {
       status: 'APPROVED',
@@ -292,6 +304,34 @@ export const approveDriverDocument = mutation({
       eventType: 'DOCUMENT_APPROVED',
       createdAt: now,
     });
+
+    const trip = await ctx.db.get(document.tripId);
+    const driverId = trip?.acceptedByDriverId ?? trip?.assignedDriverId;
+
+    if (driverId) {
+      await queuePushNotification(ctx, {
+        kind: 'document_reviewed',
+        companyId: document.companyId,
+        tripId: document.tripId,
+        driverIds: [driverId],
+        driverId,
+        documentId: args.documentId,
+        requirementId: document.requirementId,
+        reviewStatus: 'APPROVED',
+        target: 'drivers',
+      });
+    }
+
+    const afterSummary = await computeTripDocumentSummary(ctx, document.tripId);
+
+    if (!beforeSummary.isComplete && afterSummary.isComplete) {
+      await queuePushNotification(ctx, {
+        kind: 'documentation_complete',
+        companyId: document.companyId,
+        tripId: document.tripId,
+        target: 'dispatcher_admins',
+      });
+    }
 
     const updatedDocument = await ctx.db.get(args.documentId);
 
@@ -342,6 +382,23 @@ export const rejectDriverDocument = mutation({
       note: rejectionReason,
       createdAt: now,
     });
+
+    const trip = await ctx.db.get(document.tripId);
+    const driverId = trip?.acceptedByDriverId ?? trip?.assignedDriverId;
+
+    if (driverId) {
+      await queuePushNotification(ctx, {
+        kind: 'document_reviewed',
+        companyId: document.companyId,
+        tripId: document.tripId,
+        driverIds: [driverId],
+        driverId,
+        documentId: args.documentId,
+        requirementId: document.requirementId,
+        reviewStatus: 'REJECTED',
+        target: 'drivers',
+      });
+    }
 
     const updatedDocument = await ctx.db.get(args.documentId);
 

@@ -112,6 +112,38 @@ export const accessCodeStatusValidator = v.union(
   v.literal('EXPIRED'),
 );
 
+export const pushPlatformValidator = v.union(
+  v.literal('ios'),
+  v.literal('android'),
+  v.literal('web'),
+  v.literal('unknown'),
+);
+
+export const pushNotificationKindValidator = v.union(
+  v.literal('new_trip_available'),
+  v.literal('trip_accepted'),
+  v.literal('driver_document_uploaded'),
+  v.literal('document_reviewed'),
+  v.literal('documentation_complete'),
+);
+
+export const notificationEventStatusValidator = v.union(
+  v.literal('queued'),
+  v.literal('sent'),
+  v.literal('skipped'),
+  v.literal('ticket_error'),
+  v.literal('receipt_error'),
+  v.literal('failed'),
+);
+
+export const pushNotificationDataValidator = v.object({
+  type: pushNotificationKindValidator,
+  tripId: v.string(),
+  documentId: v.optional(v.string()),
+  requirementId: v.optional(v.string()),
+  offerId: v.optional(v.string()),
+});
+
 export default defineSchema({
   ...authTables,
   companies: defineTable({
@@ -313,4 +345,53 @@ export default defineSchema({
     .index('by_driver', ['driverId'])
     .index('by_status', ['status'])
     .index('by_company_and_status', ['companyId', 'status']),
+  pushTokens: defineTable({
+    expoPushToken: v.string(),
+    userProfileId: v.id('userProfiles'),
+    companyId: v.id('companies'),
+    role: userRoleValidator,
+    driverId: v.optional(v.id('drivers')),
+    platform: pushPlatformValidator,
+    projectId: v.optional(v.string()),
+    appOwnership: v.optional(v.string()),
+    deviceName: v.optional(v.string()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastSeenAt: v.number(),
+    disabledAt: v.optional(v.number()),
+    disabledReason: v.optional(v.string()),
+    lastError: v.optional(v.string()),
+  })
+    .index('by_expoPushToken', ['expoPushToken'])
+    .index('by_profile_token', ['userProfileId', 'expoPushToken'])
+    .index('by_profile', ['userProfileId'])
+    .index('by_driver_active', ['driverId', 'isActive'])
+    .index('by_company_role_active', ['companyId', 'role', 'isActive'])
+    .index('by_company_active', ['companyId', 'isActive']),
+  notificationEvents: defineTable({
+    kind: pushNotificationKindValidator,
+    status: notificationEventStatusValidator,
+    companyId: v.optional(v.id('companies')),
+    tripId: v.optional(v.id('trips')),
+    driverId: v.optional(v.id('drivers')),
+    userProfileId: v.optional(v.id('userProfiles')),
+    pushTokenId: v.optional(v.id('pushTokens')),
+    expoPushTokenSuffix: v.optional(v.string()),
+    title: v.string(),
+    body: v.string(),
+    data: v.optional(pushNotificationDataValidator),
+    eventKey: v.optional(v.string()),
+    expoTicketId: v.optional(v.string()),
+    expoTicketStatus: v.optional(v.string()),
+    expoReceiptStatus: v.optional(v.string()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_company_createdAt', ['companyId', 'createdAt'])
+    .index('by_trip_createdAt', ['tripId', 'createdAt'])
+    .index('by_status_createdAt', ['status', 'createdAt'])
+    .index('by_eventKey', ['eventKey'])
+    .index('by_expoTicketId', ['expoTicketId']),
 });
