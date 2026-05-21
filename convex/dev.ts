@@ -1,6 +1,6 @@
 import { Id } from './_generated/dataModel';
 import { mutation, MutationCtx } from './_generated/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { accessCodeStatusValidator, userRoleValidator } from './schema';
 import {
   createDefaultRequirementsForTrip,
@@ -46,6 +46,8 @@ export const seedDemoData = mutation({
     accessCodes: v.array(demoAccessCodeReturn),
   }),
   handler: async (ctx) => {
+    assertDemoDataMutationsEnabled();
+
     const now = Date.now();
     let created = false;
     const companyResult = await getOrCreateDemoCompany(ctx, now);
@@ -202,6 +204,8 @@ export const clearDemoData = mutation({
     deletedAccessCodes: v.number(),
   }),
   handler: async (ctx) => {
+    assertDemoDataMutationsEnabled();
+
     const companies = await ctx.db
       .query('companies')
       .withIndex('by_name', (q) => q.eq('name', demoCompanyName))
@@ -645,4 +649,10 @@ async function ensureDemoAccessCode(ctx: MutationCtx, input: DemoAccessCodeInput
   }
 
   return { accessCode, created: true };
+}
+
+function assertDemoDataMutationsEnabled() {
+  if (process.env.TRZACARGO_ENABLE_DEMO_MUTATIONS !== 'true') {
+    throw new ConvexError('Las mutaciones demo no están habilitadas en este entorno.');
+  }
 }

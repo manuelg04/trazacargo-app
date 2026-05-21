@@ -16,6 +16,8 @@ import {
   requireDispatcherOrAdminProfile,
 } from './lib/permissions';
 
+const accessCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
 const profileReturn = v.object({
   _id: v.id('userProfiles'),
   _creationTime: v.number(),
@@ -209,7 +211,7 @@ export const createDriverAccessCode = mutation({
     const { profile } = await requireDispatcherOrAdminProfile(ctx);
     const driver = await assertDriverBelongsToCompany(ctx, args.driverId, profile.companyId);
     const now = Date.now();
-    const code = await generateUniqueAccessCode(ctx, now);
+    const code = await generateUniqueAccessCode(ctx);
     const accessCodeId = await ctx.db.insert('accessCodes', {
       companyId: profile.companyId,
       driverId: args.driverId,
@@ -244,7 +246,7 @@ export const createDispatcherAccessCode = mutation({
     }
 
     const now = Date.now();
-    const code = await generateUniqueAccessCode(ctx, now);
+    const code = await generateUniqueAccessCode(ctx);
     const accessCodeId = await ctx.db.insert('accessCodes', {
       companyId: profile.companyId,
       role: args.role,
@@ -312,9 +314,9 @@ async function buildProfileResult(
   };
 }
 
-async function generateUniqueAccessCode(ctx: Parameters<typeof getActiveProfile>[0], now: number) {
+async function generateUniqueAccessCode(ctx: Parameters<typeof getActiveProfile>[0]) {
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const code = buildAccessCode(now, attempt);
+    const code = buildAccessCode();
     const existingCode = await ctx.db
       .query('accessCodes')
       .withIndex('by_code', (q) => q.eq('code', code))
@@ -328,7 +330,10 @@ async function generateUniqueAccessCode(ctx: Parameters<typeof getActiveProfile>
   throw new ConvexError('No se pudo generar un código único.');
 }
 
-function buildAccessCode(now: number, attempt: number) {
-  const seed = (now + attempt).toString(36).toUpperCase().padStart(8, '0');
-  return `TC-${seed.slice(-8, -4)}-${seed.slice(-4)}`;
+function buildAccessCode() {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  const code = Array.from(bytes, (byte) => accessCodeAlphabet[byte % accessCodeAlphabet.length]).join('');
+
+  return `TC-${code.slice(0, 4)}-${code.slice(4)}`;
 }

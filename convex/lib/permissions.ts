@@ -138,8 +138,9 @@ export async function assertDriverCanAccessTrip(ctx: AuthCtx, profile: ActivePro
     .withIndex('by_trip_and_driver', (q) => q.eq('tripId', tripId).eq('driverId', driverId))
     .first();
   const belongsToDriver = trip.acceptedByDriverId === driverId || trip.assignedDriverId === driverId;
+  const hasPendingOffer = offer?.status === 'PENDING';
 
-  if (!offer && !belongsToDriver) {
+  if (!hasPendingOffer && !belongsToDriver) {
     throw new ConvexError('No tienes acceso a este viaje.');
   }
 

@@ -202,6 +202,18 @@ const updateDriverStatusForCurrentCompany = (
   >
 ).updateStatusForCurrentCompany;
 
+const createDriverAccessCode = (
+  api.accessCodes as unknown as Record<
+    string,
+    FunctionReference<
+      'mutation',
+      'public',
+      { driverId: Id<'drivers'> },
+      { code: string }
+    >
+  >
+).createDriverAccessCode;
+
 function createTestApp() {
   return convexTest(schema, modules);
 }
@@ -349,6 +361,64 @@ describe('document workflow rules', () => {
 
     expect(result.createdCount).toBe(1);
     expect(result.skippedCount).toBe(0);
+  });
+
+  test('blocks drivers from reading trips after their offer is closed', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const closedOfferDriver = await createDriverWithProfile(t, seed.companyId, 'closed-offer');
+    const driver = asUser(t, closedOfferDriver.userId, 'closed-offer-driver');
+
+    await t.run(async (ctx) => {
+      const now = Date.parse('2026-05-17T13:00:00.000Z');
+
+      await ctx.db.insert('tripOffers', {
+        companyId: seed.companyId,
+        tripId: seed.tripId,
+        driverId: closedOfferDriver.driverId,
+        status: 'CANCELLED',
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await expect(driver.query(api.trips.getDetailForCurrentDriver, { tripId: seed.tripId })).rejects.toThrow(
+      ConvexError,
+    );
+    await expect(driver.query(api.tripDocuments.listByTripForCurrentDriver, { tripId: seed.tripId })).rejects.toThrow(
+      ConvexError,
+    );
+  });
+
+  test('generates non-predictable access codes for drivers', async () => {
+    const t = createTestApp();
+    const seed = await seedCompany(t);
+    const dispatcher = asUser(t, seed.dispatcherUserId, 'dispatcher');
+
+    const firstCode = await dispatcher.mutation(createDriverAccessCode, { driverId: seed.driverId });
+    const secondCode = await dispatcher.mutation(createDriverAccessCode, { driverId: seed.driverId });
+
+    expect(firstCode.code).toMatch(/^TC-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    expect(secondCode.code).toMatch(/^TC-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    expect(secondCode.code).not.toBe(firstCode.code);
+  });
+
+  test('blocks demo data mutations unless the environment enables them', async () => {
+    const t = createTestApp();
+    const previousValue = process.env.TRZACARGO_ENABLE_DEMO_MUTATIONS;
+
+    process.env.TRZACARGO_ENABLE_DEMO_MUTATIONS = 'false';
+
+    try {
+      await expect(t.mutation(api.dev.seedDemoData, {})).rejects.toThrow(ConvexError);
+      await expect(t.mutation(api.dev.clearDemoData, {})).rejects.toThrow(ConvexError);
+    } finally {
+      if (previousValue === undefined) {
+        delete process.env.TRZACARGO_ENABLE_DEMO_MUTATIONS;
+      } else {
+        process.env.TRZACARGO_ENABLE_DEMO_MUTATIONS = previousValue;
+      }
+    }
   });
 
   test('requires vehicle type when creating a driver and allows missing plate', async () => {
@@ -738,6 +808,36 @@ async function seedCompany(t: TestApp, suffix = 'main') {
     }
 
     return { companyId, driverId, dispatcherUserId, driverUserId, tripId };
+  });
+}
+
+async function createDriverWithProfile(t: TestApp, companyId: Id<'companies'>, suffix: string) {
+  const now = Date.parse('2026-05-17T12:30:00.000Z');
+
+  return await t.run(async (ctx) => {
+    const driverId = await ctx.db.insert('drivers', {
+      companyId,
+      fullName: `Conductor ${suffix}`,
+      phone: '3011234567',
+      documentNumber: `DOC-${suffix}`,
+      vehicleType: 'Tractomula',
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+    });
+    const userId = await ctx.db.insert('users', { email: `driver-${suffix}@example.com` });
+
+    await ctx.db.insert('userProfiles', {
+      userId,
+      companyId,
+      driverId,
+      role: 'DRIVER',
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { driverId, userId };
   });
 }
 
