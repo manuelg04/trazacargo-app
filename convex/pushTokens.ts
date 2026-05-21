@@ -31,7 +31,7 @@ export const registerForCurrentProfile = mutation({
     const { profile } = await requireActiveProfile(ctx);
     const expoPushToken = args.expoPushToken.trim();
 
-    if (!expoPushToken.startsWith('ExpoPushToken[')) {
+    if (!isExpoPushToken(expoPushToken)) {
       throw new ConvexError('El token de notificaciones no es válido.');
     }
 
@@ -227,4 +227,8 @@ export const updateTokenLastError = internalMutation({
 function normalizeOptionalText(value: string | undefined) {
   const trimmedValue = value?.trim();
   return trimmedValue ? trimmedValue : undefined;
+}
+
+function isExpoPushToken(value: string) {
+  return value.startsWith('ExpoPushToken[') || value.startsWith('ExponentPushToken[');
 }
